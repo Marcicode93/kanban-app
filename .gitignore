@@ -174,3 +174,7 @@ cython_debug/
 
 .DS_Store
 
+# Frontend static export copied into backend for Docker
+backend/static/*
+!backend/static/.gitkeep
+
