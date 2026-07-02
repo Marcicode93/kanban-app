@@ -18,6 +18,8 @@ Windows (PowerShell):
 
 Open http://localhost:8000
 
+Sign in with username `user` and password `password`.
+
 ## Stop
 
 Mac / Linux:

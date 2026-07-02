@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.E2E_PORT ?? "8765";
+const baseURL = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: "./tests",
   timeout: 60_000,
@@ -7,13 +10,13 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run build && npx --yes serve out -l 3000",
-    url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
+    command: `PORT=${port} bash ../scripts/e2e-server.sh`,
+    url: `${baseURL}/api/health`,
+    reuseExistingServer: false,
     timeout: 180_000,
   },
   projects: [

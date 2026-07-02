@@ -30,13 +30,12 @@ echo "Running at http://localhost:${PORT}"
 
 for _ in $(seq 1 30); do
   if curl -fs "http://localhost:${PORT}/api/health" >/dev/null 2>&1; then
+    if curl -fs "http://localhost:${PORT}/api/auth/me" | grep -q '"authenticated":false'; then
+      echo "App is running. Sign in at http://localhost:${PORT}"
+    else
+      echo "App is running at http://localhost:${PORT}"
+    fi
     break
   fi
   sleep 1
 done
-
-if curl -fs "http://localhost:${PORT}/" | grep -q "Kanban Studio"; then
-  echo "Kanban board is being served."
-else
-  echo "WARNING: Expected Kanban board not detected. Try a hard refresh (Cmd+Shift+R)."
-fi

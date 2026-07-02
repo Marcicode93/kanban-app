@@ -1,0 +1,181 @@
+{
+  "database": "sqlite",
+  "file": "data/pm.db",
+  "auto_create": true,
+  "tables": [
+    {
+      "name": "users",
+      "description": "Application users. MVP seeds one user; schema supports many.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "primary_key": true,
+          "autoincrement": true
+        },
+        {
+          "name": "username",
+          "type": "TEXT",
+          "nullable": false,
+          "unique": true
+        },
+        {
+          "name": "password_hash",
+          "type": "TEXT",
+          "nullable": false,
+          "description": "bcrypt hash; MVP seeds hash for password 'password'"
+        }
+      ]
+    },
+    {
+      "name": "boards",
+      "description": "One Kanban board per user.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "primary_key": true,
+          "autoincrement": true
+        },
+        {
+          "name": "user_id",
+          "type": "INTEGER",
+          "nullable": false,
+          "unique": true,
+          "references": {
+            "table": "users",
+            "column": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "columns",
+      "description": "Five fixed columns per board. IDs are stable and match the frontend.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "primary_key": true,
+          "description": "e.g. col-backlog, col-discovery"
+        },
+        {
+          "name": "board_id",
+          "type": "INTEGER",
+          "nullable": false,
+          "references": {
+            "table": "boards",
+            "column": "id"
+          }
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "nullable": false
+        },
+        {
+          "name": "position",
+          "type": "INTEGER",
+          "nullable": false,
+          "description": "Display order, 0-4"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_columns_board_position",
+          "columns": ["board_id", "position"],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "cards",
+      "description": "Kanban cards belonging to a column.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "primary_key": true
+        },
+        {
+          "name": "column_id",
+          "type": "TEXT",
+          "nullable": false,
+          "references": {
+            "table": "columns",
+            "column": "id"
+          }
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "nullable": false
+        },
+        {
+          "name": "details",
+          "type": "TEXT",
+          "nullable": false,
+          "default": ""
+        },
+        {
+          "name": "position",
+          "type": "INTEGER",
+          "nullable": false,
+          "description": "Order within the column, starting at 0"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_cards_column_position",
+          "columns": ["column_id", "position"],
+          "unique": true
+        }
+      ]
+    }
+  ],
+  "seed": {
+    "users": [
+      {
+        "username": "user",
+        "password": "password"
+      }
+    ],
+    "default_columns": [
+      { "id": "col-backlog", "title": "Backlog", "position": 0 },
+      { "id": "col-discovery", "title": "Discovery", "position": 1 },
+      { "id": "col-progress", "title": "In Progress", "position": 2 },
+      { "id": "col-review", "title": "Review", "position": 3 },
+      { "id": "col-done", "title": "Done", "position": 4 }
+    ],
+    "board_data_source": "frontend/src/lib/kanban.ts initialData"
+  },
+  "board_data_mapping": {
+    "api_shape": {
+      "columns": [
+        {
+          "id": "string",
+          "title": "string",
+          "cardIds": ["string"]
+        }
+      ],
+      "cards": {
+        "<card_id>": {
+          "id": "string",
+          "title": "string",
+          "details": "string"
+        }
+      }
+    },
+    "to_database": [
+      "Each user has one board row.",
+      "Each column in BoardData.columns maps to a columns row (id, title, position from array index).",
+      "Each card in BoardData.cards maps to a cards row; column_id and position come from column.cardIds order."
+    ],
+    "from_database": [
+      "Load columns for the user's board ordered by position.",
+      "Load all cards for those columns ordered by position.",
+      "Build cards map keyed by card id.",
+      "Build each column.cardIds from card ids in that column's order."
+    ]
+  }
+}

@@ -89,20 +89,20 @@ Gate the Kanban behind a login screen. Hardcoded credentials: `user` / `password
 
 ### Substeps
 
-- [ ] Add a login page or login form (shown when not authenticated)
-- [ ] Implement simple session auth in FastAPI (HTTP-only cookie or equivalent)
-- [ ] Add `POST /api/login` and `POST /api/logout` endpoints
-- [ ] Protect `/` (and board API routes added later) — unauthenticated users see login
-- [ ] Add a logout button to the Kanban UI
-- [ ] Seed the hardcoded user in backend (or in-memory) for MVP
+- [x] Add a login page or login form (shown when not authenticated)
+- [x] Implement simple session auth in FastAPI (HTTP-only cookie or equivalent)
+- [x] Add `POST /api/login` and `POST /api/logout` endpoints
+- [x] Protect `/` (and board API routes added later) — unauthenticated users see login
+- [x] Add a logout button to the Kanban UI
+- [x] Seed the hardcoded user in backend (or in-memory) for MVP
 
 ### Tests
 
-- [ ] Backend: login with valid credentials returns session; invalid credentials return 401
-- [ ] Backend: logout clears session
-- [ ] Backend: protected endpoint returns 401 without session
-- [ ] Frontend unit tests for login form validation and auth state
-- [ ] E2E: unauthenticated visit to `/` shows login; login with `user`/`password` shows Kanban; logout returns to login
+- [x] Backend: login with valid credentials returns session; invalid credentials return 401
+- [x] Backend: logout clears session
+- [x] Backend: protected endpoint returns 401 without session
+- [x] Frontend unit tests for login form validation and auth state
+- [x] E2E: unauthenticated visit to `/` shows login; login with `user`/`password` shows Kanban; logout returns to login
 
 ### Success criteria
 
@@ -119,11 +119,11 @@ Propose a SQLite schema for users, boards, columns, and cards. Document and get 
 
 ### Substeps
 
-- [ ] Design schema supporting multiple users (future) but MVP uses one hardcoded user
-- [ ] One board per user; five fixed columns per board (IDs match frontend: `col-backlog`, etc.)
-- [ ] Save schema as JSON in `docs/schema.json`
-- [ ] Write `docs/DATABASE.md` explaining tables, relationships, and seeding approach
-- [ ] Document how `BoardData` from the frontend maps to/from the database
+- [x] Design schema supporting multiple users (future) but MVP uses one hardcoded user
+- [x] One board per user; five fixed columns per board (IDs match frontend: `col-backlog`, etc.)
+- [x] Save schema as JSON in `docs/schema.json`
+- [x] Write `docs/DATABASE.md` explaining tables, relationships, and seeding approach
+- [x] Document how `BoardData` from the frontend maps to/from the database
 - [ ] **Pause for user sign-off before Part 6**
 
 ### Tests
