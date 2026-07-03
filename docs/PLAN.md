@@ -175,19 +175,19 @@ Wire the frontend to the backend API so the Kanban is fully persistent.
 
 ### Substeps
 
-- [ ] Add API client helpers in `frontend/src/lib/api.ts` (or similar)
-- [ ] Load board from `GET /api/board` on mount (replace `initialData` init)
-- [ ] Persist board changes via `PUT /api/board` on rename, add, delete, and drag-drop
-- [ ] Handle loading and error states minimally
-- [ ] Send credentials (cookies) with API requests
-- [ ] Update `backend/AGENTS.md` with API documentation
+- [x] Add API client helpers in `frontend/src/lib/api.ts` (or similar)
+- [x] Load board from `GET /api/board` on mount (replace `initialData` init)
+- [x] Persist board changes via `PUT /api/board` on rename, add, delete, and drag-drop
+- [x] Handle loading and error states minimally
+- [x] Send credentials (cookies) with API requests
+- [x] Update `backend/AGENTS.md` with API documentation
 
 ### Tests
 
-- [ ] Frontend unit tests mock API and verify correct calls on user actions
-- [ ] E2E: login, modify board (rename column, add card, move card), reload page — changes persist
-- [ ] E2E: two rapid changes do not corrupt board state
-- [ ] Backend tests from Part 6 still pass
+- [x] Frontend unit tests mock API and verify correct calls on user actions
+- [x] E2E: login, modify board (rename column, add card, move card), reload page — changes persist
+- [x] E2E: two rapid changes do not corrupt board state
+- [x] Backend tests from Part 6 still pass
 
 ### Success criteria
 

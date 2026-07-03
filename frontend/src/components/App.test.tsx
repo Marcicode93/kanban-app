@@ -5,14 +5,18 @@ import { App } from "@/components/App";
 vi.mock("@/lib/api", () => ({
   getAuthStatus: vi.fn(),
   logout: vi.fn(),
+  getBoard: vi.fn(),
+  saveBoard: vi.fn(),
 }));
 
-import { getAuthStatus, logout } from "@/lib/api";
+import { getAuthStatus, getBoard, logout } from "@/lib/api";
+import { initialData } from "@/lib/kanban";
 
 describe("App", () => {
   beforeEach(() => {
     vi.mocked(getAuthStatus).mockReset();
     vi.mocked(logout).mockReset();
+    vi.mocked(getBoard).mockResolvedValue(initialData);
   });
 
   it("shows the login form when unauthenticated", async () => {

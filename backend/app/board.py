@@ -77,6 +77,10 @@ def replace_board(board: Board, data: BoardData, db: Session) -> None:
     }
     payload_card_ids = set(data.cards.keys())
 
+    for index, card in enumerate(existing_cards.values()):
+        card.position = -(index + 1)
+    db.flush()
+
     for column_data in data.columns:
         for position, card_id in enumerate(column_data.cardIds):
             card_payload = data.cards[card_id]

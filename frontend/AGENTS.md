@@ -2,7 +2,7 @@
 
 ## Overview
 
-A Next.js 16 App Router demo that renders a single in-memory Kanban board. All board state lives in React `useState` inside `KanbanBoard`; there is no backend, auth, or persistence yet.
+A Next.js 16 App Router app with a persistent Kanban board backed by the FastAPI API.
 
 ## Tech stack
 
@@ -67,7 +67,8 @@ Column count and IDs are fixed; only titles are editable (rename). Cards can be 
 
 ### `KanbanBoard`
 
-- Holds `board: BoardData` state initialized from `initialData`
+- Holds `board: BoardData` state loaded from `GET /api/board`
+- Persists changes via `PUT /api/board` (debounced for column renames)
 - Wraps columns in `DndContext` with `PointerSensor` (6px activation distance)
 - Handlers: `handleDragStart/End`, `handleRenameColumn`, `handleAddCard`, `handleDeleteCard`
 - Renders header with column title pills and a 5-column responsive grid
@@ -125,9 +126,6 @@ Fonts: **Space Grotesk** (display) and **Manrope** (body) via `next/font/google`
 
 ## What is not implemented yet
 
-- Static export / Docker serving configuration (`output: 'export'` in `next.config.ts`)
-- Authentication (login/logout)
-- Backend API integration or persistence
 - Card inline editing (only add/delete; existing card text is read-only)
 - AI chat sidebar
 

@@ -49,6 +49,27 @@ def test_put_board_persists_changes(client: TestClient) -> None:
     assert get_response.json()["cards"]["card-1"]["title"] == "Updated card"
 
 
+def test_put_board_moves_card_between_columns(client: TestClient) -> None:
+    login(client)
+    board = client.get("/api/board").json()
+    review_column = next(
+        column for column in board["columns"] if column["id"] == "col-review"
+    )
+    backlog_column = board["columns"][0]
+    backlog_column["cardIds"] = [
+        card_id for card_id in backlog_column["cardIds"] if card_id != "card-1"
+    ]
+    review_column["cardIds"] = ["card-1", *review_column["cardIds"]]
+
+    response = client.put("/api/board", json=board)
+    assert response.status_code == 200
+    assert "card-1" in next(
+        column["cardIds"]
+        for column in response.json()["columns"]
+        if column["id"] == "col-review"
+    )
+
+
 def test_put_board_requires_authentication(client: TestClient) -> None:
     login(client)
     board = client.get("/api/board").json()

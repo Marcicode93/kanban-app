@@ -1,3 +1,5 @@
+import type { BoardData } from "@/lib/kanban";
+
 const API_BASE = "";
 
 async function apiFetch(path: string, options: RequestInit = {}) {
@@ -40,4 +42,23 @@ export async function logout(): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to log out");
   }
+}
+
+export async function getBoard(): Promise<BoardData> {
+  const response = await apiFetch("/api/board");
+  if (!response.ok) {
+    throw new Error("Failed to load board");
+  }
+  return response.json();
+}
+
+export async function saveBoard(board: BoardData): Promise<BoardData> {
+  const response = await apiFetch("/api/board", {
+    method: "PUT",
+    body: JSON.stringify(board),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to save board");
+  }
+  return response.json();
 }
