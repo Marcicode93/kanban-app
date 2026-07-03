@@ -178,3 +178,5 @@ cython_debug/
 backend/static/*
 !backend/static/.gitkeep
 
+backend/data/
+

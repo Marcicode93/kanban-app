@@ -114,4 +114,4 @@ The database file lives at `data/pm.db` inside the container working directory. 
 
 ## Approval
 
-This design is ready for review. Part 6 implementation begins after sign-off.
+Schema approved. Part 6 implemented.

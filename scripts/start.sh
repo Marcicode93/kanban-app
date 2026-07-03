@@ -23,6 +23,7 @@ echo "Starting container..."
 docker run -d \
   --name "$CONTAINER_NAME" \
   -p "${PORT}:8000" \
+  -v pm-kanban-data:/app/backend/data \
   "${ENV_ARGS[@]}" \
   "$IMAGE_NAME"
 

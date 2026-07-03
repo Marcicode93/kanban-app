@@ -124,7 +124,7 @@ Propose a SQLite schema for users, boards, columns, and cards. Document and get 
 - [x] Save schema as JSON in `docs/schema.json`
 - [x] Write `docs/DATABASE.md` explaining tables, relationships, and seeding approach
 - [x] Document how `BoardData` from the frontend maps to/from the database
-- [ ] **Pause for user sign-off before Part 6**
+- [x] **Pause for user sign-off before Part 6**
 
 ### Tests
 
@@ -144,22 +144,22 @@ API routes to read and update a user's Kanban board. SQLite database created on 
 
 ### Substeps
 
-- [ ] Add SQLAlchemy (or similar) models matching approved schema
-- [ ] Auto-create database file on startup if missing
-- [ ] Seed default user (`user`) and board with `initialData` from frontend on first run
-- [ ] `GET /api/board` — return current user's board as `BoardData` JSON
-- [ ] `PUT /api/board` — replace board state (full snapshot for simplicity)
-- [ ] All board routes require authentication (from Part 4)
-- [ ] Add `pytest` test suite in `backend/tests/`
+- [x] Add SQLAlchemy (or similar) models matching approved schema
+- [x] Auto-create database file on startup if missing
+- [x] Seed default user (`user`) and board with `initialData` from frontend on first run
+- [x] `GET /api/board` — return current user's board as `BoardData` JSON
+- [x] `PUT /api/board` — replace board state (full snapshot for simplicity)
+- [x] All board routes require authentication (from Part 4)
+- [x] Add `pytest` test suite in `backend/tests/`
 
 ### Tests
 
-- [ ] DB is created automatically when missing
-- [ ] Seed data matches frontend `initialData` for the default user
-- [ ] `GET /api/board` returns correct JSON for authenticated user
-- [ ] `PUT /api/board` persists changes; subsequent GET reflects them
-- [ ] Unauthenticated requests to board routes return 401
-- [ ] `pytest` passes with good coverage of routes and DB logic
+- [x] DB is created automatically when missing
+- [x] Seed data matches frontend `initialData` for the default user
+- [x] `GET /api/board` returns correct JSON for authenticated user
+- [x] `PUT /api/board` persists changes; subsequent GET reflects them
+- [x] Unauthenticated requests to board routes return 401
+- [x] `pytest` passes with good coverage of routes and DB logic
 
 ### Success criteria
 

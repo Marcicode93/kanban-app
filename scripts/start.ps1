@@ -22,6 +22,7 @@ Write-Host "Starting container..."
 docker run -d `
     --name $ContainerName `
     -p "${Port}:8000" `
+    -v pm-kanban-data:/app/backend/data `
     @envArgs `
     $ImageName
 
