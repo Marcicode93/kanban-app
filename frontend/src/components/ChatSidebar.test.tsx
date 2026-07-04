@@ -11,8 +11,6 @@ import { sendChatMessage } from "@/lib/api";
 
 const defaultProps = {
   onBoardUpdate: vi.fn(),
-  isOpen: true,
-  onToggle: vi.fn(),
 };
 
 describe("ChatSidebar", () => {

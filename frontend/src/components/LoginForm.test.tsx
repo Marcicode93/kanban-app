@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LoginForm } from "@/components/LoginForm";
+import { renderWithProviders } from "@/test/test-utils";
 
 vi.mock("@/lib/api", () => ({
   login: vi.fn(),
@@ -16,7 +17,7 @@ describe("LoginForm", () => {
   });
 
   it("shows validation error when fields are empty", async () => {
-    render(<LoginForm onSuccess={vi.fn()} />);
+    renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
     expect(screen.getByText(/username and password are required/i)).toBeInTheDocument();
@@ -27,7 +28,7 @@ describe("LoginForm", () => {
     vi.mocked(login).mockResolvedValue();
     const onSuccess = vi.fn();
 
-    render(<LoginForm onSuccess={onSuccess} />);
+    renderWithProviders(<LoginForm onSuccess={onSuccess} />);
     await userEvent.type(screen.getByLabelText(/username/i), "user");
     await userEvent.type(screen.getByLabelText(/password/i), "password");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -41,7 +42,7 @@ describe("LoginForm", () => {
   it("shows an error for invalid credentials", async () => {
     vi.mocked(login).mockRejectedValue(new Error("Invalid credentials"));
 
-    render(<LoginForm onSuccess={vi.fn()} />);
+    renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/username/i), "user");
     await userEvent.type(screen.getByLabelText(/password/i), "wrong");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -53,7 +54,7 @@ describe("LoginForm", () => {
     vi.mocked(register).mockResolvedValue();
     const onSuccess = vi.fn();
 
-    render(<LoginForm onSuccess={onSuccess} />);
+    renderWithProviders(<LoginForm onSuccess={onSuccess} />);
     await userEvent.click(screen.getByRole("button", { name: /create one/i }));
     await userEvent.type(screen.getByLabelText(/username/i), "newbie");
     await userEvent.type(screen.getByLabelText(/password/i), "secret123");
@@ -68,7 +69,7 @@ describe("LoginForm", () => {
   it("shows an error when username is taken", async () => {
     vi.mocked(register).mockRejectedValue(new Error("Username already taken"));
 
-    render(<LoginForm onSuccess={vi.fn()} />);
+    renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /create one/i }));
     await userEvent.type(screen.getByLabelText(/username/i), "taken");
     await userEvent.type(screen.getByLabelText(/password/i), "secret123");

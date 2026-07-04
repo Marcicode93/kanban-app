@@ -35,12 +35,12 @@ export const CardEditModal = ({ card, onClose, onSave }: CardEditModalProps) => 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--navy-dark)]/40 px-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] px-6"
       data-testid="card-edit-modal"
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-[32px] border border-[var(--stroke)] bg-white p-8 shadow-[var(--shadow)]"
+        className="w-full max-w-md rounded-[32px] border border-[var(--stroke)] bg-[var(--surface-strong)] p-8 shadow-[var(--shadow)]"
       >
         <h2 className="font-display text-xl font-semibold text-[var(--navy-dark)]">
           Edit card
@@ -57,7 +57,7 @@ export const CardEditModal = ({ card, onClose, onSave }: CardEditModalProps) => 
               id="edit-card-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-[var(--stroke)] px-3 py-2 text-sm outline-none focus:border-[var(--primary-blue)]"
+              className="mt-2 w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--navy-dark)] outline-none focus:border-[var(--primary-blue)]"
             />
           </div>
           <div>
@@ -72,7 +72,7 @@ export const CardEditModal = ({ card, onClose, onSave }: CardEditModalProps) => 
               value={details}
               onChange={(event) => setDetails(event.target.value)}
               rows={4}
-              className="mt-2 w-full rounded-xl border border-[var(--stroke)] px-3 py-2 text-sm outline-none focus:border-[var(--primary-blue)]"
+              className="mt-2 w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--navy-dark)] outline-none focus:border-[var(--primary-blue)]"
             />
           </div>
         </div>

@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "@/components/App";
+import { renderWithProviders } from "@/test/test-utils";
 
 vi.mock("@/lib/api", () => ({
   getAuthStatus: vi.fn(),
@@ -25,7 +26,7 @@ describe("App", () => {
       username: null,
     });
 
-    render(<App />);
+    renderWithProviders(<App />);
 
     expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();
   });
@@ -36,7 +37,7 @@ describe("App", () => {
       username: "user",
     });
 
-    render(<App />);
+    renderWithProviders(<App />);
 
     expect(await screen.findByRole("heading", { name: /kanban studio/i })).toBeInTheDocument();
     expect(screen.getByText(/signed in as/i)).toBeInTheDocument();
@@ -48,7 +49,7 @@ describe("App", () => {
       .mockResolvedValueOnce({ authenticated: true, username: "user" });
     vi.mocked(logout).mockResolvedValue();
 
-    render(<App />);
+    renderWithProviders(<App />);
     await screen.findByRole("heading", { name: /kanban studio/i });
 
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));

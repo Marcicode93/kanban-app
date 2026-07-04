@@ -16,6 +16,7 @@ import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { BoardSkeleton } from "@/components/BoardSkeleton";
 import { CardEditModal } from "@/components/CardEditModal";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Toast } from "@/components/Toast";
 import { getBoard, saveBoard } from "@/lib/api";
 import { createId, moveCard, type BoardData } from "@/lib/kanban";
@@ -31,7 +32,6 @@ export const KanbanBoard = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const saveQueue = useRef(Promise.resolve());
@@ -183,15 +183,15 @@ export const KanbanBoard = ({
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
-      <main className="relative mx-auto flex min-h-screen max-w-[1800px] gap-6 px-6 pb-16 pt-12">
-        <div className="flex min-w-0 flex-1 flex-col gap-10">
-        <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] backdrop-blur">
+      <main className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-6 px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:flex-row lg:items-start">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 lg:gap-8">
+        <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-[var(--surface-strong)]/90 p-6 shadow-[var(--shadow)] backdrop-blur sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[var(--gray-text)]">
                 Single Board Kanban
               </p>
-              <h1 className="mt-3 font-display text-4xl font-semibold text-[var(--navy-dark)]">
+              <h1 className="mt-3 font-display text-3xl font-semibold text-[var(--navy-dark)] sm:text-4xl">
                 Kanban Studio
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--gray-text)]">
@@ -208,15 +208,8 @@ export const KanbanBoard = ({
                   {username}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  data-testid="chat-toggle"
-                  onClick={() => setIsChatOpen(true)}
-                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)] lg:hidden"
-                >
-                  AI Chat
-                </button>
+              <div className="flex flex-wrap gap-2">
+                <ThemeToggle />
                 <button
                   type="button"
                   onClick={() => void onLogout()}
@@ -227,11 +220,11 @@ export const KanbanBoard = ({
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex gap-3 overflow-x-auto pb-1">
             {board.columns.map((column) => (
               <div
                 key={column.id}
-                className="flex items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
+                className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
               >
                 <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
                 {column.title}
@@ -246,7 +239,7 @@ export const KanbanBoard = ({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <section className="flex gap-6 overflow-x-auto pb-2 lg:grid lg:grid-cols-5 lg:overflow-visible">
+          <section className="board-columns gap-4 overflow-x-auto pb-2 sm:gap-5 lg:gap-6 board:overflow-x-visible">
             {board.columns.map((column) => (
               <KanbanColumn
                 key={column.id}
@@ -269,11 +262,7 @@ export const KanbanBoard = ({
         </DndContext>
         </div>
 
-        <ChatSidebar
-          isOpen={isChatOpen}
-          onToggle={() => setIsChatOpen(false)}
-          onBoardUpdate={applyBoardFromAI}
-        />
+        <ChatSidebar onBoardUpdate={applyBoardFromAI} />
       </main>
 
       <CardEditModal

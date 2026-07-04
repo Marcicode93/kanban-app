@@ -27,15 +27,17 @@ src/
     KanbanCard.tsx        # Sortable card with delete button
     KanbanCardPreview.tsx # Drag overlay preview (no delete button)
     NewCardForm.tsx       # Collapsible add-card form per column
-    ChatSidebar.tsx       # AI chat sidebar
+    ChatSidebar.tsx       # AI chat sidebar (always visible in layout)
     CardEditModal.tsx     # Modal to edit card title/details
     Toast.tsx             # Error feedback toast
     BoardSkeleton.tsx     # Loading skeleton for board
+    ThemeToggle.tsx       # Light/dark mode toggle
     LoginForm.tsx         # Sign-in and registration form
     App.tsx               # Auth gate; renders LoginForm or KanbanBoard
   lib/
     kanban.ts             # Types, initialData, moveCard, createId
     api.ts                # Auth, board, and AI chat API helpers
+    theme.tsx             # ThemeProvider and useTheme (dark mode)
   test/
     setup.ts              # Vitest + jest-dom setup
 tests/
@@ -77,7 +79,7 @@ Column count and IDs are fixed; only titles are editable (rename). Cards can be 
 
 - Holds `board: BoardData` state loaded from `GET /api/board`
 - Persists changes via `PUT /api/board` (debounced for column renames)
-- Renders `ChatSidebar` alongside the board (side-by-side on large screens; slide-over on mobile)
+- Renders `ChatSidebar` alongside the board (side-by-side from `md` up; stacked on small screens with chat always visible)
 - Applies AI board updates via `applyBoardFromAI` (no extra save; backend already persisted)
 - Wraps columns in `DndContext` with `PointerSensor` (6px activation distance)
 - Handlers: `handleDragStart/End`, `handleRenameColumn`, `handleAddCard`, `handleDeleteCard`, `handleEditCard`

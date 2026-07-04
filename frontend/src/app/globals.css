@@ -8,14 +8,37 @@
   --gray-text: #888888;
   --surface: #f7f8fb;
   --surface-strong: #ffffff;
+  --surface-elevated: #ffffff;
   --stroke: rgba(3, 33, 71, 0.08);
   --shadow: 0 18px 40px rgba(3, 33, 71, 0.12);
+  --overlay: rgba(3, 33, 71, 0.4);
+  --card-shadow: 0 12px 24px rgba(3, 33, 71, 0.08);
+  --card-shadow-drag: 0 18px 32px rgba(3, 33, 71, 0.16);
+}
+
+[data-theme="dark"] {
+  --navy-dark: #e8edf5;
+  --gray-text: #9aa8bc;
+  --surface: #071222;
+  --surface-strong: #0f1d33;
+  --surface-elevated: #152640;
+  --stroke: rgba(232, 237, 245, 0.12);
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --card-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  --card-shadow-drag: 0 18px 32px rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
   --color-background: var(--surface);
   --color-foreground: var(--navy-dark);
   --font-sans: var(--font-body);
+  --breakpoint-board: 100rem;
+}
+
+.board-columns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(260px, 1fr));
 }
 
 * {

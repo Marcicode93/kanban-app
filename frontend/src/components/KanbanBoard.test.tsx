@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { initialData } from "@/lib/kanban";
+import { renderWithProviders } from "@/test/test-utils";
 
 vi.mock("@/lib/api", () => ({
   getBoard: vi.fn(),
@@ -25,18 +26,18 @@ describe("KanbanBoard", () => {
   });
 
   it("renders five columns", async () => {
-    render(<KanbanBoard {...defaultProps} />);
+    renderWithProviders(<KanbanBoard {...defaultProps} />);
     expect(await screen.findAllByTestId(/column-/i)).toHaveLength(5);
     expect(getBoard).toHaveBeenCalled();
   });
 
   it("renders the chat sidebar", async () => {
-    render(<KanbanBoard {...defaultProps} />);
+    renderWithProviders(<KanbanBoard {...defaultProps} />);
     expect(await screen.findByTestId("chat-sidebar")).toBeInTheDocument();
   });
 
   it("renames a column and saves", async () => {
-    render(<KanbanBoard {...defaultProps} />);
+    renderWithProviders(<KanbanBoard {...defaultProps} />);
     const column = (await screen.findAllByTestId(/column-/i))[0];
     const input = within(column).getByLabelText("Column title");
     await userEvent.clear(input);
@@ -49,7 +50,7 @@ describe("KanbanBoard", () => {
   });
 
   it("adds and removes a card", async () => {
-    render(<KanbanBoard {...defaultProps} />);
+    renderWithProviders(<KanbanBoard {...defaultProps} />);
     const column = (await screen.findAllByTestId(/column-/i))[0];
     const addButton = within(column).getByRole("button", {
       name: /add a card/i,
@@ -77,7 +78,7 @@ describe("KanbanBoard", () => {
   });
 
   it("edits a card via the modal", async () => {
-    render(<KanbanBoard {...defaultProps} />);
+    renderWithProviders(<KanbanBoard {...defaultProps} />);
     const column = (await screen.findAllByTestId(/column-/i))[0];
     await userEvent.click(
       within(column).getByRole("button", { name: /edit align roadmap themes/i })
