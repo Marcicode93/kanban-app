@@ -9,13 +9,14 @@ This project is building a Project Management App. Key features:
 - The cards on the Kanban board can be moved with drag and drop, and edited
 - There is an AI chat feature in a sidebar; the AI is able to create / edit / move one or more cards
 
-## Limitations
+## Limitations (MVP — see Phase 2)
 
-For the MVP, there will only be a user sign in (hardcoded to 'user' and 'password') but the database will support multiple users for future.
+MVP shipped with a single seeded user and local Docker workflow. Phase 2 adds registration, UI polish, and production hardening. See [docs/PLAN-PHASE2.md](docs/PLAN-PHASE2.md).
 
-For the MVP, there will only be 1 Kanban board per signed in user.
-
-For the MVP, this will run locally (in a docker container)
+For the MVP build:
+- Hardcoded demo user `user` / `password` (database supports multiple users)
+- One Kanban board per signed-in user
+- Runs locally in Docker; hosting/deploy is your responsibility after the build
 
 ## Technical Decisions
 
@@ -50,4 +51,6 @@ A working MVP of the frontend has been built and is already in frontend. This is
 ## Working documentation
 
 All documents for planning and executing this project will be in the docs/ directory.
-Please review the docs/PLAN.md document before proceeding.
+- MVP plan (complete): [docs/PLAN.md](docs/PLAN.md)
+- Phase 2 (features, polish): [docs/PLAN-PHASE2.md](docs/PLAN-PHASE2.md)
+- Optional deploy notes (your task): [docs/DEPLOY.md](docs/DEPLOY.md)

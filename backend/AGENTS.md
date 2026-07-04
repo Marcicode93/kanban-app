@@ -7,6 +7,7 @@ FastAPI application serving the PM MVP.
 ```
 backend/
   app/
+    ai.py         # OpenRouter client (OpenAI-compatible)
     auth.py       # Session auth helpers
     board.py      # BoardData <-> database mapping
     main.py       # FastAPI app, routes, static file mount
@@ -29,9 +30,12 @@ backend/
 | GET    | `/api/auth/me`   | No   | Returns `{authenticated, username?}` |
 | GET    | `/api/auth/user` | Yes  | Returns `{username}` |
 | POST   | `/api/login`     | No   | Body: `{username, password}` |
+| POST   | `/api/register`  | No   | Body: `{username, password}`; creates user + empty board; signs in |
 | POST   | `/api/logout`    | No   | Clears session |
 | GET    | `/api/board`     | Yes  | Returns `BoardData` JSON |
 | PUT    | `/api/board`     | Yes  | Replaces board with `BoardData` JSON |
+| POST   | `/api/ai/test`   | No   | Sends "What is 2+2?" to OpenRouter; returns `{response}` |
+| POST   | `/api/ai/chat`   | Yes  | Body: `{message, history?}`; returns `{message, board?}` |
 | GET    | `/`              | No*  | Serves static frontend |
 
 \*The frontend gates the Kanban UI; board API routes require a session.
@@ -50,6 +54,14 @@ backend/
 ## Database
 
 SQLite at `backend/data/pm.db`. Auto-created and seeded on startup. See [docs/DATABASE.md](../docs/DATABASE.md).
+
+## AI (OpenRouter)
+
+- API key: `OPENROUTER_API_KEY` in project root `.env` (loaded at startup; Docker passes it via `--env-file`)
+- Model: `openai/gpt-oss-120b`
+- Client: OpenAI Python SDK pointed at `https://openrouter.ai/api/v1`
+- Missing key: `POST /api/ai/test` returns 503 with `"OPENROUTER_API_KEY is not set"`
+- Chat: `POST /api/ai/chat` (auth required) sends board JSON + conversation history to the model; response is structured JSON `{message, board?}`. When `board` is present, it is persisted. History is passed by the client on each request (no server-side chat storage for MVP).
 
 ## MVP credentials
 

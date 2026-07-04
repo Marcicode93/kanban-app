@@ -37,6 +37,19 @@ export async function login(username: string, password: string): Promise<void> {
   }
 }
 
+export async function register(username: string, password: string): Promise<void> {
+  const response = await apiFetch("/api/register", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+  if (response.status === 409) {
+    throw new Error("Username already taken");
+  }
+  if (!response.ok) {
+    throw new Error("Registration failed");
+  }
+}
+
 export async function logout(): Promise<void> {
   const response = await apiFetch("/api/logout", { method: "POST" });
   if (!response.ok) {
@@ -61,4 +74,35 @@ export async function saveBoard(board: BoardData): Promise<BoardData> {
     throw new Error("Failed to save board");
   }
   return response.json();
+}
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AIChatResponse = {
+  message: string;
+  board: BoardData | null;
+};
+
+export async function sendChatMessage(
+  message: string,
+  history: ChatMessage[]
+): Promise<AIChatResponse> {
+  const response = await apiFetch("/api/ai/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, history }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as {
+      detail?: string;
+    };
+    throw new Error(body.detail ?? "Failed to send chat message");
+  }
+  const data = (await response.json()) as {
+    message: string;
+    board?: BoardData | null;
+  };
+  return { message: data.message, board: data.board ?? null };
 }

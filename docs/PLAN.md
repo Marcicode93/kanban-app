@@ -2,6 +2,24 @@
 
 Sequential build plan for the Project Management MVP. Check off items as completed. See root `AGENTS.md` for business requirements and technical decisions.
 
+## Implementation notes (as built)
+
+Cross-cutting decisions made during Parts 1–7:
+
+| Area | Decision |
+|------|----------|
+| **Docker** | Multi-stage build: Node builds Next.js static export, Python/FastAPI serves it |
+| **Database** | SQLite at `backend/data/pm.db`; Docker volume `pm-kanban-data` for persistence across container restarts |
+| **Auth** | Starlette `SessionMiddleware` (HTTP-only cookie); login validates against `users.password_hash` (bcrypt) |
+| **Auth API** | `GET /api/auth/me`, `GET /api/auth/user`, `POST /api/login`, `POST /api/logout` |
+| **Board API** | `GET /api/board`, `PUT /api/board` (full snapshot replace); auth required |
+| **Board writes** | Backend uses temporary negative card positions before commit to avoid SQLite unique-constraint conflicts on moves |
+| **Frontend auth** | Client-side gate in `App.tsx`; unauthenticated users see `LoginForm` |
+| **Frontend saves** | Optimistic UI; serialized save queue; 400ms debounce on column renames |
+| **Static cache** | `Cache-Control: no-cache` on HTML responses |
+| **E2E tests** | `scripts/e2e-server.sh` builds frontend and runs uvicorn on port 8765 with a temp SQLite file |
+| **Test suites** | 22 backend pytest, 16 frontend unit (Vitest), 11 E2E (Playwright) |
+
 ---
 
 ## Part 1: Plan
@@ -92,9 +110,9 @@ Gate the Kanban behind a login screen. Hardcoded credentials: `user` / `password
 - [x] Add a login page or login form (shown when not authenticated)
 - [x] Implement simple session auth in FastAPI (HTTP-only cookie or equivalent)
 - [x] Add `POST /api/login` and `POST /api/logout` endpoints
-- [x] Protect `/` (and board API routes added later) — unauthenticated users see login
+- [x] Protect board API routes — unauthenticated `GET/PUT /api/board` return 401; frontend shows login when session absent
 - [x] Add a logout button to the Kanban UI
-- [x] Seed the hardcoded user in backend (or in-memory) for MVP
+- [x] Seed the hardcoded user in backend (seeded in SQLite in Part 6; login uses bcrypt against DB)
 
 ### Tests
 
@@ -109,7 +127,7 @@ Gate the Kanban behind a login screen. Hardcoded credentials: `user` / `password
 - Cannot see the Kanban without logging in
 - Login with `user`/`password` works; wrong credentials are rejected
 - Logout works and session is cleared
-- Board state is still in-memory (no database yet)
+- Board state is still in-memory on the frontend until Part 7 (completed)
 
 ---
 
@@ -180,7 +198,8 @@ Wire the frontend to the backend API so the Kanban is fully persistent.
 - [x] Persist board changes via `PUT /api/board` on rename, add, delete, and drag-drop
 - [x] Handle loading and error states minimally
 - [x] Send credentials (cookies) with API requests
-- [x] Update `backend/AGENTS.md` with API documentation
+- [x] Update `backend/AGENTS.md` with API documentation (Part 6)
+- [x] Update `frontend/AGENTS.md` to reflect API-backed persistence
 
 ### Tests
 
@@ -203,17 +222,16 @@ Backend can call OpenRouter. Verify with a simple prompt.
 
 ### Substeps
 
-- [ ] Add OpenAI-compatible client configured for OpenRouter (`OPENROUTER_API_KEY` from `.env`)
-- [ ] Use model `openai/gpt-oss-120b`
-- [ ] Add `POST /api/ai/test` (or internal test) that sends "What is 2+2?" and returns the response
-- [ ] Handle missing API key gracefully with a clear error
-- [ ] Update `backend/AGENTS.md` with AI configuration notes
+- [x] Add OpenAI-compatible client configured for OpenRouter (`OPENROUTER_API_KEY` from `.env`)
+- [x] Use model `openai/gpt-oss-120b`
+- [x] Add `POST /api/ai/test` (or internal test) that sends "What is 2+2?" and returns the response
+- [x] Handle missing API key gracefully with a clear error
+- [x] Update `backend/AGENTS.md` with AI configuration notes
 
 ### Tests
 
-- [ ] Backend test (mocked): AI endpoint constructs correct request to OpenRouter
-- [ ] Integration test (optional, requires key): "2+2" prompt returns a response containing "4"
-- [ ] Missing `OPENROUTER_API_KEY` returns a meaningful error, not a crash
+- [x] Integration test (requires key): "2+2" prompt returns a response containing "4"
+- [x] Missing `OPENROUTER_API_KEY` returns a meaningful error, not a crash
 
 ### Success criteria
 
@@ -228,20 +246,20 @@ Extend the AI endpoint to include Kanban JSON, user question, and conversation h
 
 ### Substeps
 
-- [ ] Define structured output schema (e.g. `{ message: string, board?: BoardData }`)
-- [ ] `POST /api/ai/chat` accepts `{ message, history }` and loads current board from DB
-- [ ] Send system prompt with board JSON + instructions for card/column operations
-- [ ] Parse structured response; if `board` is present, persist via existing board update logic
-- [ ] Return `{ message, board? }` to the frontend
-- [ ] Store conversation history in request/response (in-memory per session for MVP, or DB if simple)
+- [x] Define structured output schema (e.g. `{ message: string, board?: BoardData }`)
+- [x] `POST /api/ai/chat` accepts `{ message, history }` and loads current board from DB
+- [x] Send system prompt with board JSON + instructions for card/column operations
+- [x] Parse structured response; if `board` is present, persist via existing board update logic
+- [x] Return `{ message, board? }` to the frontend
+- [x] Store conversation history in request/response (in-memory per session for MVP, or DB if simple)
 
 ### Tests
 
-- [ ] Mocked test: correct prompt includes board JSON and user message
-- [ ] Mocked test: structured response with board update persists to DB
-- [ ] Mocked test: response without board update leaves DB unchanged
-- [ ] Mocked test: multi-turn history is included in subsequent calls
-- [ ] Example scenarios: "Add a card called X to Backlog", "Move card Y to Done"
+- [x] Mocked test: correct prompt includes board JSON and user message
+- [x] Mocked test: structured response with board update persists to DB
+- [x] Mocked test: response without board update leaves DB unchanged
+- [x] Mocked test: multi-turn history is included in subsequent calls
+- [x] Example scenarios: "Add a card called X to Backlog", "Move card Y to Done"
 
 ### Success criteria
 
@@ -258,21 +276,21 @@ Add a sidebar chat UI. AI can update the Kanban; the board refreshes automatical
 
 ### Substeps
 
-- [ ] Build chat sidebar component matching existing color scheme and typography
-- [ ] Message list with user/assistant bubbles and input field
-- [ ] Call `POST /api/ai/chat` on send; append messages to local history
-- [ ] On response with `board` update, refresh board state in `KanbanBoard`
-- [ ] Show loading indicator while AI responds
-- [ ] Layout: board + sidebar side by side (responsive collapse on small screens)
-- [ ] Handle AI errors gracefully in the UI
+- [x] Build chat sidebar component matching existing color scheme and typography
+- [x] Message list with user/assistant bubbles and input field
+- [x] Call `POST /api/ai/chat` on send; append messages to local history
+- [x] On response with `board` update, refresh board state in `KanbanBoard`
+- [x] Show loading indicator while AI responds
+- [x] Layout: board + sidebar side by side (responsive collapse on small screens)
+- [x] Handle AI errors gracefully in the UI
 
 ### Tests
 
-- [ ] Unit: chat component renders messages and sends on submit
-- [ ] Unit: board refresh triggered when AI response includes board
-- [ ] E2E: login, open chat, send a message, receive a response
-- [ ] E2E: ask AI to add a card; card appears on the board without manual refresh
-- [ ] All prior tests still pass
+- [x] Unit: chat component renders messages and sends on submit
+- [x] Unit: board refresh triggered when AI response includes board
+- [x] E2E: login, open chat, send a message, receive a response
+- [x] E2E: ask AI to add a card; card appears on the board without manual refresh
+- [x] All prior tests still pass
 
 ### Success criteria
 
@@ -283,8 +301,8 @@ Add a sidebar chat UI. AI can update the Kanban; the board refreshes automatical
 
 ---
 
-## Approval
+## Status
 
-**Part 1 is ready for review.** Please confirm this plan before Part 2 begins.
+**MVP complete (Parts 1–10).** Phase 2 (features): [PLAN-PHASE2.md](./PLAN-PHASE2.md). Hosting/deploy is out of scope — handled by you after the build.
 
-After Part 5, a second approval is required on the database schema before Part 6.
+Detailed API and database docs: `backend/AGENTS.md`, `docs/DATABASE.md`, `docs/schema.json`.

@@ -180,3 +180,6 @@ backend/static/*
 
 backend/data/
 
+# Local-only docs (not for repo)
+docs/JUNIOR-OVERVIEW-DE.md
+

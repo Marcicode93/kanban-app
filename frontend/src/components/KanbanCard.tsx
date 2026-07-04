@@ -6,9 +6,10 @@ import type { Card } from "@/lib/kanban";
 type KanbanCardProps = {
   card: Card;
   onDelete: (cardId: string) => void;
+  onEdit: (cardId: string) => void;
 };
 
-export const KanbanCard = ({ card, onDelete }: KanbanCardProps) => {
+export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id });
 
@@ -31,7 +32,7 @@ export const KanbanCard = ({ card, onDelete }: KanbanCardProps) => {
       data-testid={`card-${card.id}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <h4 className="font-display text-base font-semibold text-[var(--navy-dark)]">
             {card.title}
           </h4>
@@ -39,14 +40,26 @@ export const KanbanCard = ({ card, onDelete }: KanbanCardProps) => {
             {card.details}
           </p>
         </div>
+        <div className="flex shrink-0 flex-col gap-1">
         <button
           type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => onEdit(card.id)}
+          className="rounded-full border border-transparent px-2 py-1 text-xs font-semibold text-[var(--primary-blue)] transition hover:border-[var(--stroke)]"
+          aria-label={`Edit ${card.title}`}
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={() => onDelete(card.id)}
           className="rounded-full border border-transparent px-2 py-1 text-xs font-semibold text-[var(--gray-text)] transition hover:border-[var(--stroke)] hover:text-[var(--navy-dark)]"
           aria-label={`Delete ${card.title}`}
         >
           Remove
         </button>
+        </div>
       </div>
     </article>
   );

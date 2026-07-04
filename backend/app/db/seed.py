@@ -2,7 +2,7 @@ import bcrypt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.board import replace_board
+from app.board import column_storage_id, replace_board
 from app.db.models import Board, Column, User
 from app.schemas import BoardData
 
@@ -16,6 +16,16 @@ DEFAULT_COLUMNS = [
     {"id": "col-review", "title": "Review", "position": 3},
     {"id": "col-done", "title": "Done", "position": 4},
 ]
+
+EMPTY_BOARD = BoardData.model_validate(
+    {
+        "columns": [
+            {"id": column["id"], "title": column["title"], "cardIds": []}
+            for column in DEFAULT_COLUMNS
+        ],
+        "cards": {},
+    }
+)
 
 INITIAL_BOARD = BoardData.model_validate(
     {
@@ -80,6 +90,37 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
+def provision_board(db: Session, user: User, board_data: BoardData) -> Board:
+    board = Board(user_id=user.id)
+    db.add(board)
+    db.flush()
+
+    for column in DEFAULT_COLUMNS:
+        db.add(
+            Column(
+                id=column_storage_id(board.id, column["id"]),
+                board_id=board.id,
+                title=column["title"],
+                position=column["position"],
+            )
+        )
+    db.flush()
+
+    replace_board(board, board_data, db)
+    return board
+
+
+def create_user_with_board(db: Session, username: str, password: str) -> User:
+    user = User(
+        username=username,
+        password_hash=hash_password(password),
+    )
+    db.add(user)
+    db.flush()
+    provision_board(db, user, EMPTY_BOARD)
+    return user
+
+
 def seed_if_empty(db: Session) -> None:
     if db.scalar(select(User.id).limit(1)) is not None:
         return
@@ -91,20 +132,5 @@ def seed_if_empty(db: Session) -> None:
     db.add(user)
     db.flush()
 
-    board = Board(user_id=user.id)
-    db.add(board)
-    db.flush()
-
-    for column in DEFAULT_COLUMNS:
-        db.add(
-            Column(
-                id=column["id"],
-                board_id=board.id,
-                title=column["title"],
-                position=column["position"],
-            )
-        )
-    db.flush()
-
-    replace_board(board, INITIAL_BOARD, db)
+    provision_board(db, user, INITIAL_BOARD)
     db.commit()

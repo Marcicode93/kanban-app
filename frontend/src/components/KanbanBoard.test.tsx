@@ -6,6 +6,7 @@ import { initialData } from "@/lib/kanban";
 vi.mock("@/lib/api", () => ({
   getBoard: vi.fn(),
   saveBoard: vi.fn(),
+  sendChatMessage: vi.fn(),
 }));
 
 import { getBoard, saveBoard } from "@/lib/api";
@@ -27,6 +28,11 @@ describe("KanbanBoard", () => {
     render(<KanbanBoard {...defaultProps} />);
     expect(await screen.findAllByTestId(/column-/i)).toHaveLength(5);
     expect(getBoard).toHaveBeenCalled();
+  });
+
+  it("renders the chat sidebar", async () => {
+    render(<KanbanBoard {...defaultProps} />);
+    expect(await screen.findByTestId("chat-sidebar")).toBeInTheDocument();
   });
 
   it("renames a column and saves", async () => {
@@ -68,5 +74,23 @@ describe("KanbanBoard", () => {
     await userEvent.click(deleteButton);
 
     expect(within(column).queryByText("New card")).not.toBeInTheDocument();
+  });
+
+  it("edits a card via the modal", async () => {
+    render(<KanbanBoard {...defaultProps} />);
+    const column = (await screen.findAllByTestId(/column-/i))[0];
+    await userEvent.click(
+      within(column).getByRole("button", { name: /edit align roadmap themes/i })
+    );
+
+    const titleInput = screen.getByLabelText(/^title$/i);
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Updated title");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    expect(within(column).getByText("Updated title")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(saveBoard).toHaveBeenCalled();
+    });
   });
 });

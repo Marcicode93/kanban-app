@@ -13,7 +13,7 @@ Four normalized tables: `users`, `boards`, `columns`, `cards`. The API exposes b
 | ORM | SQLAlchemy (Part 6) |
 | Users | Table supports multiple users; MVP seeds one (`user`) |
 | Boards | One board per user (unique `user_id` on `boards`) |
-| Columns | Five fixed per board; stable string IDs; titles renameable |
+| Columns | Five fixed per board; logical IDs in API; storage IDs scoped per board |
 | Cards | Belong to one column; order via `position` |
 
 ## Entity relationships
@@ -30,7 +30,7 @@ users 1──1 boards 1──* columns 1──* cards
 
 ### users
 
-Stores credentials for sign-in. Part 4 uses hardcoded auth; Part 6 will validate against `password_hash`.
+Stores credentials for sign-in. Login validates against `password_hash` (bcrypt).
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -49,7 +49,7 @@ Stores credentials for sign-in. Part 4 uses hardcoded auth; Part 6 will validate
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | TEXT PK | Fixed IDs: `col-backlog`, `col-discovery`, `col-progress`, `col-review`, `col-done` |
+| id | TEXT PK | Storage ID: `b{board_id}-{logical_id}` (e.g. `b1-col-backlog`). API uses logical IDs (`col-backlog`, etc.) |
 | board_id | INTEGER FK | Parent board |
 | title | TEXT | Renameable display label |
 | position | INTEGER | 0-4, unique per board |
@@ -81,14 +81,14 @@ type BoardData = {
 2. Select columns `ORDER BY position`.
 3. Select cards for those columns `ORDER BY column_id, position`.
 4. Build `cards` as a map keyed by card id.
-5. For each column, set `cardIds` to the ordered list of card ids in that column.
+5. For each column, strip the storage prefix to expose logical `id` and set `cardIds` to the ordered list of card ids in that column.
 
 ### API to database (`PUT /api/board`)
 
 Full board snapshot replace (simple, matches Part 6 plan):
 
-1. Verify all five expected column ids are present.
-2. Upsert column titles and positions.
+1. Verify all five expected logical column ids are present.
+2. Map logical ids to storage ids (`b{board_id}-{logical_id}`); upsert column titles and positions.
 3. For each column, reconcile cards: update titles/details, update `column_id`/`position` for moves, insert new cards, delete removed cards.
 
 ## Seeding
@@ -97,8 +97,10 @@ On first startup when the database is empty:
 
 1. Insert user `user` with bcrypt hash of `password`.
 2. Create a board for that user.
-3. Insert five default columns (ids and titles from `schema.json` seed).
-4. Insert cards from `initialData` in `frontend/src/lib/kanban.ts` (positions derived from each column's `cardIds` order).
+3. Insert five default columns with board-scoped storage ids.
+4. Insert cards from `INITIAL_BOARD` in `backend/app/db/seed.py`.
+
+New users registered via `POST /api/register` get an empty board via `create_user_with_board()`.
 
 Re-running the app must not duplicate seed data.
 

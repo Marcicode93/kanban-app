@@ -2,11 +2,14 @@
 
 import { useState, type FormEvent } from "react";
 
-type LoginFormProps = {
+type AuthFormProps = {
   onSuccess: () => void;
 };
 
-export const LoginForm = ({ onSuccess }: LoginFormProps) => {
+type Mode = "login" | "register";
+
+export const LoginForm = ({ onSuccess }: AuthFormProps) => {
+  const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,14 +26,29 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
     setIsSubmitting(true);
     try {
-      const { login } = await import("@/lib/api");
-      await login(username.trim(), password);
+      const api = await import("@/lib/api");
+      if (mode === "login") {
+        await api.login(username.trim(), password);
+      } else {
+        await api.register(username.trim(), password);
+      }
       onSuccess();
-    } catch {
-      setError("Invalid username or password.");
+    } catch (err) {
+      if (err instanceof Error && err.message === "Username already taken") {
+        setError("Username already taken.");
+      } else if (mode === "login") {
+        setError("Invalid username or password.");
+      } else {
+        setError("Registration failed. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const toggleMode = () => {
+    setMode(mode === "login" ? "register" : "login");
+    setError(null);
   };
 
   return (
@@ -43,10 +61,12 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           Project Management
         </p>
         <h1 className="mt-3 font-display text-3xl font-semibold text-[var(--navy-dark)]">
-          Sign in
+          {mode === "login" ? "Sign in" : "Create account"}
         </h1>
         <p className="mt-3 text-sm leading-6 text-[var(--gray-text)]">
-          Use your workspace credentials to open the Kanban board.
+          {mode === "login"
+            ? "Use your workspace credentials to open the Kanban board."
+            : "Register to get your own Kanban board."}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -78,7 +98,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="mt-2 w-full rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
-              autoComplete="current-password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </div>
 
@@ -91,9 +111,25 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
             disabled={isSubmitting}
             className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60"
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting
+              ? mode === "login"
+                ? "Signing in..."
+                : "Creating account..."
+              : mode === "login"
+                ? "Sign in"
+                : "Create account"}
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={toggleMode}
+          className="mt-6 text-sm text-[var(--primary-blue)] transition hover:underline"
+        >
+          {mode === "login"
+            ? "Need an account? Create one"
+            : "Already have an account? Sign in"}
+        </button>
       </main>
     </div>
   );

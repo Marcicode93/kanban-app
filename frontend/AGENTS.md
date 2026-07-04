@@ -27,12 +27,20 @@ src/
     KanbanCard.tsx        # Sortable card with delete button
     KanbanCardPreview.tsx # Drag overlay preview (no delete button)
     NewCardForm.tsx       # Collapsible add-card form per column
+    ChatSidebar.tsx       # AI chat sidebar
+    CardEditModal.tsx     # Modal to edit card title/details
+    Toast.tsx             # Error feedback toast
+    BoardSkeleton.tsx     # Loading skeleton for board
+    LoginForm.tsx         # Sign-in and registration form
+    App.tsx               # Auth gate; renders LoginForm or KanbanBoard
   lib/
     kanban.ts             # Types, initialData, moveCard, createId
+    api.ts                # Auth, board, and AI chat API helpers
   test/
     setup.ts              # Vitest + jest-dom setup
 tests/
-  kanban.spec.ts          # Playwright E2E tests
+  auth.spec.ts            # Login/logout E2E
+  register.spec.ts        # Registration and card edit E2E
 ```
 
 ## Data model (`src/lib/kanban.ts`)
@@ -69,9 +77,19 @@ Column count and IDs are fixed; only titles are editable (rename). Cards can be 
 
 - Holds `board: BoardData` state loaded from `GET /api/board`
 - Persists changes via `PUT /api/board` (debounced for column renames)
+- Renders `ChatSidebar` alongside the board (side-by-side on large screens; slide-over on mobile)
+- Applies AI board updates via `applyBoardFromAI` (no extra save; backend already persisted)
 - Wraps columns in `DndContext` with `PointerSensor` (6px activation distance)
-- Handlers: `handleDragStart/End`, `handleRenameColumn`, `handleAddCard`, `handleDeleteCard`
-- Renders header with column title pills and a 5-column responsive grid
+- Handlers: `handleDragStart/End`, `handleRenameColumn`, `handleAddCard`, `handleDeleteCard`, `handleEditCard`
+- Shows `BoardSkeleton` while loading; `Toast` on save errors
+- Renders header with column title pills and a 5-column responsive grid (horizontal scroll on mobile)
+
+### `ChatSidebar`
+
+- Message list with user/assistant bubbles
+- Calls `POST /api/ai/chat` on send; maintains local conversation history
+- Shows loading state and error messages
+- Invokes `onBoardUpdate` when the AI response includes an updated board
 
 ### `KanbanColumn`
 
@@ -84,8 +102,18 @@ Column count and IDs are fixed; only titles are editable (rename). Cards can be 
 ### `KanbanCard`
 
 - `useSortable` for drag handle (entire card is draggable)
-- Displays title + details; "Remove" button calls `onDelete`
+- Displays title + details; "Edit" and "Remove" buttons
 - `data-testid="card-{id}"`
+
+### `CardEditModal`
+
+- Modal form for editing card title and details
+- Save calls `onSave`; cancel closes without persisting
+
+### `LoginForm`
+
+- Toggle between Sign in and Create account
+- Registration calls `POST /api/register`; auto sign-in on success
 
 ### `NewCardForm`
 
@@ -120,14 +148,19 @@ Fonts: **Space Grotesk** (display) and **Manrope** (body) via `next/font/google`
 
 **Unit (`src/lib/kanban.test.ts`)** — `moveCard`: same-column reorder, cross-column move, drop to column end.
 
-**Component (`src/components/KanbanBoard.test.tsx`)** — renders 5 columns, renames a column, adds and removes a card.
+**Component (`src/components/KanbanBoard.test.tsx`)** — renders 5 columns, renames a column, adds and removes a card, edits a card via modal, renders chat sidebar.
+
+**Component (`src/components/LoginForm.test.tsx`)** — sign-in, registration, validation errors.
+
+**Component (`src/components/ChatSidebar.test.tsx`)** — sends messages, displays AI replies, applies board updates, shows errors.
 
 **E2E (`tests/kanban.spec.ts`)** — loads board, adds a card, drags a card between columns via mouse events.
 
-## What is not implemented yet
+**E2E (`tests/register.spec.ts`)** — registers a new user with empty board; edits a card title.
 
-- Card inline editing (only add/delete; existing card text is read-only)
-- AI chat sidebar
+**E2E (`tests/auth.spec.ts`)** — login, invalid credentials, logout.
+
+**E2E (`tests/chat.spec.ts`)** — sends a chat message and receives a response; AI adds a card to the board (requires `OPENROUTER_API_KEY`).
 
 ## Integration notes for later parts
 

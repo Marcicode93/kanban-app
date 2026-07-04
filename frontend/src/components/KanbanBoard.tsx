@@ -13,6 +13,10 @@ import {
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
+import { ChatSidebar } from "@/components/ChatSidebar";
+import { BoardSkeleton } from "@/components/BoardSkeleton";
+import { CardEditModal } from "@/components/CardEditModal";
+import { Toast } from "@/components/Toast";
 import { getBoard, saveBoard } from "@/lib/api";
 import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
@@ -27,6 +31,9 @@ export const KanbanBoard = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const saveQueue = useRef(Promise.resolve());
   const renameTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,7 +55,14 @@ export const KanbanBoard = ({
     saveQueue.current = saveQueue.current
       .then(() => saveBoard(next))
       .then(setBoard)
-      .catch(() => setError("Failed to save board."));
+      .catch(() => {
+        setToastMessage("Failed to save board. Please try again.");
+      });
+  };
+
+  const applyBoardFromAI = (next: BoardData) => {
+    setBoard(next);
+    setError(null);
   };
 
   const scheduleRenameSave = (next: BoardData) => {
@@ -135,12 +149,22 @@ export const KanbanBoard = ({
     });
   };
 
+  const handleEditCard = (cardId: string, title: string, details: string) => {
+    if (!board) {
+      return;
+    }
+
+    persistBoard({
+      ...board,
+      cards: {
+        ...board.cards,
+        [cardId]: { ...board.cards[cardId], title, details },
+      },
+    });
+  };
+
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--gray-text)]">
-        Loading board...
-      </div>
-    );
+    return <BoardSkeleton />;
   }
 
   if (error || !board) {
@@ -152,13 +176,15 @@ export const KanbanBoard = ({
   }
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
+  const editingCard = editingCardId ? cardsById[editingCardId] : null;
 
   return (
     <div className="relative overflow-hidden">
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
-      <main className="relative mx-auto flex min-h-screen max-w-[1500px] flex-col gap-10 px-6 pb-16 pt-12">
+      <main className="relative mx-auto flex min-h-screen max-w-[1800px] gap-6 px-6 pb-16 pt-12">
+        <div className="flex min-w-0 flex-1 flex-col gap-10">
         <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
@@ -182,13 +208,23 @@ export const KanbanBoard = ({
                   {username}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => void onLogout()}
-                className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
-              >
-                Log out
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  data-testid="chat-toggle"
+                  onClick={() => setIsChatOpen(true)}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)] lg:hidden"
+                >
+                  AI Chat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onLogout()}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
+                >
+                  Log out
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
@@ -210,7 +246,7 @@ export const KanbanBoard = ({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <section className="grid gap-6 lg:grid-cols-5">
+          <section className="flex gap-6 overflow-x-auto pb-2 lg:grid lg:grid-cols-5 lg:overflow-visible">
             {board.columns.map((column) => (
               <KanbanColumn
                 key={column.id}
@@ -219,6 +255,7 @@ export const KanbanBoard = ({
                 onRename={handleRenameColumn}
                 onAddCard={handleAddCard}
                 onDeleteCard={handleDeleteCard}
+                onEditCard={setEditingCardId}
               />
             ))}
           </section>
@@ -230,7 +267,23 @@ export const KanbanBoard = ({
             ) : null}
           </DragOverlay>
         </DndContext>
+        </div>
+
+        <ChatSidebar
+          isOpen={isChatOpen}
+          onToggle={() => setIsChatOpen(false)}
+          onBoardUpdate={applyBoardFromAI}
+        />
       </main>
+
+      <CardEditModal
+        card={editingCard ?? null}
+        onClose={() => setEditingCardId(null)}
+        onSave={handleEditCard}
+      />
+      {toastMessage ? (
+        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      ) : null}
     </div>
   );
 };

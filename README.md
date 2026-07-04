@@ -37,3 +37,16 @@ Windows:
 ## API
 
 - `GET /api/health` — health check
+
+Phase 2 roadmap: [docs/PLAN-PHASE2.md](docs/PLAN-PHASE2.md).
+
+## Environment
+
+| Variable | Purpose |
+|----------|---------|
+| `OPENROUTER_API_KEY` | AI chat (required for `/api/ai/chat`) |
+| `SESSION_SECRET` | Session cookie signing; **required** when `ENV=production` |
+| `ENV` | Set to `production` on public deploy |
+| `DATABASE_URL` | Optional; defaults to `backend/data/pm.db` locally |
+
+Copy `.env.example` to `.env` for local development.
