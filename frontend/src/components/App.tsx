@@ -94,7 +94,6 @@ export const App = () => {
   return (
     <>
       <KanbanBoard
-        username={username ?? "user"}
         displayName={email ?? username ?? "user"}
         onLogout={handleLogout}
         onOpenSettings={() => setShowAccountSettings(true)}

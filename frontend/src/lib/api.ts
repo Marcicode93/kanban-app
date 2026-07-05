@@ -180,7 +180,7 @@ export async function saveBoard(board: BoardData): Promise<BoardData> {
     body: JSON.stringify(board),
   });
   if (!response.ok) {
-    throw new Error("Failed to save board");
+    throw await parseError(response, "Failed to save board");
   }
   return response.json();
 }

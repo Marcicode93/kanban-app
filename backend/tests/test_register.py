@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.db.seed import EMPTY_BOARD
-from app.mail import FakeMailSender
+from app.mail import FakeMailSender, MailSendError
 
 
 def register_and_verify(
@@ -105,3 +105,53 @@ def test_register_requires_password_length(client: TestClient) -> None:
         json={"email": "short@example.com", "password": "short"},
     )
     assert response.status_code == 400
+
+
+def test_register_mail_failure_allows_retry(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    def fail_send(to: str, code: str, purpose: str) -> None:
+        raise MailSendError("mail failed")
+
+    monkeypatch.setattr("app.routes.registration.send_verification_code", fail_send)
+    response = client.post(
+        "/api/register",
+        json={"email": "retry@example.com", "password": "secret123"},
+    )
+    assert response.status_code == 503
+
+    monkeypatch.setattr(
+        "app.routes.registration.send_verification_code",
+        lambda to, code, purpose: FakeMailSender().send_code(to, code, purpose),
+    )
+    response = client.post(
+        "/api/register",
+        json={"email": "retry@example.com", "password": "secret123"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "pending_verification"}
+
+
+def test_change_email_verify_rejects_email_taken_after_code(
+    client: TestClient,
+) -> None:
+    register_and_verify(client, "alice@example.com")
+    response = client.post(
+        "/api/account/email",
+        json={"new_email": "new-owner@example.com"},
+    )
+    assert response.status_code == 200
+    alice_code = FakeMailSender.last_code
+    assert alice_code is not None
+    client.post("/api/logout")
+
+    register_and_verify(client, "new-owner@example.com")
+    client.post("/api/logout")
+
+    response = client.post(
+        "/api/auth/verify-email",
+        json={"email": "alice@example.com", "code": alice_code},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Email already registered"

@@ -17,9 +17,11 @@ class User(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    board: Mapped["Board"] = relationship(back_populates="user", uselist=False)
+    board: Mapped["Board"] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
     verification_tokens: Mapped[list["VerificationToken"]] = relationship(
-        back_populates="user"
+        back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -42,9 +44,12 @@ class Board(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     user: Mapped[User] = relationship(back_populates="board")
-    columns: Mapped[list["Column"]] = relationship(back_populates="board")
+    columns: Mapped[list["Column"]] = relationship(
+        back_populates="board", cascade="all, delete-orphan"
+    )
 
 
 class Column(Base):
@@ -59,7 +64,9 @@ class Column(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
 
     board: Mapped[Board] = relationship(back_populates="columns")
-    cards: Mapped[list["Card"]] = relationship(back_populates="column")
+    cards: Mapped[list["Card"]] = relationship(
+        back_populates="column", cascade="all, delete-orphan"
+    )
 
 
 class Card(Base):
@@ -75,3 +82,11 @@ class Card(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
 
     column: Mapped[Column] = relationship(back_populates="cards")
+
+
+class RateLimitHit(Base):
+    __tablename__ = "rate_limit_hits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

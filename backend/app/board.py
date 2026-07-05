@@ -22,6 +22,40 @@ def column_logical_id(column_id: str) -> str:
     return column_id
 
 
+def card_storage_id(board_id: int, logical_id: str) -> str:
+    return f"b{board_id}-{logical_id}"
+
+
+def card_logical_id(card_id: str) -> str:
+    if card_id.startswith("b") and "-" in card_id:
+        prefix, logical_id = card_id.split("-", 1)
+        if prefix[1:].isdigit():
+            return logical_id
+    return card_id
+
+
+def validate_board_data(data: BoardData) -> None:
+    column_ids = [column.id for column in data.columns]
+    if len(column_ids) != 5 or set(column_ids) != EXPECTED_COLUMN_IDS:
+        raise HTTPException(status_code=400, detail="Invalid board columns")
+
+    referenced_card_ids: list[str] = []
+    for column in data.columns:
+        referenced_card_ids.extend(column.cardIds)
+
+    if len(referenced_card_ids) != len(set(referenced_card_ids)):
+        raise HTTPException(status_code=400, detail="Duplicate card references")
+
+    referenced = set(referenced_card_ids)
+    payload = set(data.cards.keys())
+    if referenced != payload:
+        raise HTTPException(status_code=400, detail="Invalid board cards")
+
+    for card_id, card in data.cards.items():
+        if card.id != card_id:
+            raise HTTPException(status_code=400, detail="Invalid card id")
+
+
 def get_board_for_username(db: Session, username: str) -> Board:
     board = db.scalar(
         select(Board)
@@ -44,15 +78,17 @@ def board_to_data(board: Board) -> BoardData:
     for column in columns:
         logical_id = column_logical_id(column.id)
         for card in sorted(column.cards, key=lambda item: item.position):
-            cards_by_column[logical_id].append(card.id)
-            cards[card.id] = {
-                "id": card.id,
+            card_id = card_logical_id(card.id)
+            cards_by_column[logical_id].append(card_id)
+            cards[card_id] = {
+                "id": card_id,
                 "title": card.title,
                 "details": card.details,
             }
 
     return BoardData.model_validate(
         {
+            "version": board.version,
             "columns": [
                 {
                     "id": column_logical_id(column.id),
@@ -66,10 +102,16 @@ def board_to_data(board: Board) -> BoardData:
     )
 
 
-def replace_board(board: Board, data: BoardData, db: Session) -> None:
-    column_ids = {column.id for column in data.columns}
-    if len(data.columns) != 5 or column_ids != EXPECTED_COLUMN_IDS:
-        raise HTTPException(status_code=400, detail="Invalid board columns")
+def replace_board(
+    board: Board,
+    data: BoardData,
+    db: Session,
+    *,
+    increment_version: bool = True,
+) -> None:
+    validate_board_data(data)
+    if data.version != board.version:
+        raise HTTPException(status_code=409, detail="Board has changed")
 
     for position, column_data in enumerate(data.columns):
         storage_id = column_storage_id(board.id, column_data.id)
@@ -79,12 +121,8 @@ def replace_board(board: Board, data: BoardData, db: Session) -> None:
         column.title = column_data.title
         column.position = position
 
-        for card_id in column_data.cardIds:
-            if card_id not in data.cards:
-                raise HTTPException(status_code=400, detail="Missing card data")
-
     existing_cards = {
-        card.id: card
+        card_logical_id(card.id): card
         for card in db.scalars(
             select(Card).join(Column).where(Column.board_id == board.id)
         )
@@ -108,7 +146,7 @@ def replace_board(board: Board, data: BoardData, db: Session) -> None:
             else:
                 db.add(
                     Card(
-                        id=card_id,
+                        id=card_storage_id(board.id, card_id),
                         column_id=storage_id,
                         title=card_payload.title,
                         details=card_payload.details,
@@ -120,4 +158,6 @@ def replace_board(board: Board, data: BoardData, db: Session) -> None:
         if card_id not in payload_card_ids:
             db.delete(card)
 
+    if increment_version:
+        board.version += 1
     db.commit()

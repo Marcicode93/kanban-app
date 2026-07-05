@@ -52,6 +52,14 @@ def _migrate_schema(engine) -> None:
             )
         )
 
+    if "boards" in inspector.get_table_names():
+        board_columns = {column["name"] for column in inspector.get_columns("boards")}
+        if "version" not in board_columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("ALTER TABLE boards ADD COLUMN version INTEGER NOT NULL DEFAULT 0")
+                )
+
 
 def init_db(url: str | None = None) -> None:
     global _engine, _SessionLocal

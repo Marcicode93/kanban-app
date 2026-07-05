@@ -13,7 +13,6 @@ vi.mock("@/lib/api", () => ({
 import { getBoard, saveBoard } from "@/lib/api";
 
 const defaultProps = {
-  username: "user",
   displayName: "user",
   onLogout: vi.fn(),
   onOpenSettings: vi.fn(),

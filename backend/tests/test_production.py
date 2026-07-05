@@ -17,7 +17,7 @@ def test_ai_chat_rate_limit(client: TestClient, monkeypatch: pytest.MonkeyPatch)
 
     reset_rate_limits()
     monkeypatch.setattr(
-        "app.main.chat_with_board",
+        "app.routes.ai.chat_with_board",
         lambda board, history, message: AIChatResult(message="ok"),
     )
 
@@ -48,9 +48,33 @@ def test_production_rejects_default_session_secret(
         validate_production_config()
 
 
+def test_production_rejects_console_mail_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.config import validate_mail_config
+
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("MAIL_PROVIDER", "console")
+
+    with pytest.raises(RuntimeError, match="console"):
+        validate_mail_config()
+
+
+def test_fake_mail_provider_requires_test_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.config import validate_mail_config
+
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("MAIL_PROVIDER", "fake")
+
+    with pytest.raises(RuntimeError, match="fake"):
+        validate_mail_config()
+
+
 def test_ai_test_disabled_in_production(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("app.main.is_production", lambda: True)
+    monkeypatch.setattr("app.routes.ai.is_production", lambda: True)
     response = client.post("/api/ai/test")
     assert response.status_code == 404

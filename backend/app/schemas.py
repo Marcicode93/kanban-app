@@ -71,6 +71,7 @@ class ColumnData(BaseModel):
 class BoardData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    version: int = 0
     columns: list[ColumnData]
     cards: dict[str, CardData]
 

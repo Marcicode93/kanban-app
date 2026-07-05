@@ -102,7 +102,7 @@ def test_ai_chat_prompt_includes_board_and_message(
         captured["messages"] = build_chat_messages(board, history, message)
         return AIChatResult(message="OK")
 
-    monkeypatch.setattr("app.main.chat_with_board", fake_chat_with_board)
+    monkeypatch.setattr("app.routes.ai.chat_with_board", fake_chat_with_board)
     login(client)
     board = client.get("/api/board").json()
 
@@ -134,7 +134,7 @@ def test_ai_chat_board_update_persists(
         updated = BoardData.model_validate(data)
         return AIChatResult(message="Added card-9 to Backlog", board=updated)
 
-    monkeypatch.setattr("app.main.chat_with_board", fake_chat_with_board)
+    monkeypatch.setattr("app.routes.ai.chat_with_board", fake_chat_with_board)
     login(client)
 
     response = client.post(
@@ -158,7 +158,7 @@ def test_ai_chat_without_board_update_leaves_db_unchanged(
 
         return AIChatResult(message="Just chatting")
 
-    monkeypatch.setattr("app.main.chat_with_board", fake_chat_with_board)
+    monkeypatch.setattr("app.routes.ai.chat_with_board", fake_chat_with_board)
     login(client)
     before = client.get("/api/board").json()
 
@@ -182,7 +182,7 @@ def test_ai_chat_includes_multi_turn_history(
         captured["messages"] = build_chat_messages(board, history, message)
         return AIChatResult(message="Done")
 
-    monkeypatch.setattr("app.main.chat_with_board", fake_chat_with_board)
+    monkeypatch.setattr("app.routes.ai.chat_with_board", fake_chat_with_board)
     login(client)
     history = [
         {"role": "user", "content": "Add a card called X to Backlog"},

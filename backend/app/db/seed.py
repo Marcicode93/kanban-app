@@ -106,7 +106,7 @@ def provision_board(db: Session, user: User, board_data: BoardData) -> Board:
         )
     db.flush()
 
-    replace_board(board, board_data, db)
+    replace_board(board, board_data, db, increment_version=False)
     return board
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -18,89 +18,61 @@ import { BoardSkeleton } from "@/components/BoardSkeleton";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { CardEditModal } from "@/components/CardEditModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { KanbanHeader } from "@/components/KanbanHeader";
 import { Toast } from "@/components/Toast";
-import { getBoard, saveBoard } from "@/lib/api";
-import { createId, moveCard, type BoardData } from "@/lib/kanban";
+import { useBoardData } from "@/components/useBoardData";
+import {
+  type PendingDelete,
+  useBoardMutations,
+} from "@/components/useBoardMutations";
 
 export const KanbanBoard = ({
   displayName,
   onLogout,
   onOpenSettings,
 }: {
-  username: string;
   displayName: string;
   onLogout: () => void | Promise<void>;
   onOpenSettings: () => void;
 }) => {
-  const [board, setBoard] = useState<BoardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    board,
+    isLoading,
+    error,
+    toast,
+    setToast,
+    persistBoard,
+    applyBoardFromAI,
+    scheduleRenameSave,
+  } = useBoardData();
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<{
-    columnId: string;
-    cardId: string;
-    title: string;
-  } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(
     () =>
       typeof window !== "undefined" &&
       localStorage.getItem("pm-onboarding-dismissed") !== "true"
   );
-  const [toast, setToast] = useState<{
-    message: string;
-    variant: "error" | "success";
-  } | null>(null);
-  const saveQueue = useRef(Promise.resolve());
-  const renameTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
     })
   );
 
-  useEffect(() => {
-    getBoard()
-      .then(setBoard)
-      .catch(() => setError("Failed to load board."))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  const persistBoard = (next: BoardData, showSuccess = false) => {
-    setBoard(next);
-    saveQueue.current = saveQueue.current
-      .then(() => saveBoard(next))
-      .then(setBoard)
-      .then(() => {
-        if (showSuccess) {
-          setToast({ message: "Board saved.", variant: "success" });
-        }
-      })
-      .catch(() => {
-        setToast({
-          message: "Failed to save board. Please try again.",
-          variant: "error",
-        });
-      });
-  };
-
-  const applyBoardFromAI = (next: BoardData) => {
-    setBoard(next);
-    setError(null);
-  };
-
-  const scheduleRenameSave = (next: BoardData) => {
-    setBoard(next);
-    if (renameTimeout.current) {
-      clearTimeout(renameTimeout.current);
-    }
-    renameTimeout.current = setTimeout(() => {
-      persistBoard(next);
-    }, 400);
-  };
+  const {
+    handleAddCard,
+    handleDeleteCard,
+    handleEditCard,
+    handleMoveCard,
+    handleRenameColumn,
+    requestDeleteCard,
+  } = useBoardMutations(
+    board,
+    persistBoard,
+    scheduleRenameSave,
+    setPendingDelete
+  );
 
   const cardsById = useMemo(() => board?.cards ?? {}, [board]);
 
@@ -144,99 +116,7 @@ export const KanbanBoard = ({
       return;
     }
 
-    persistBoard(
-      {
-        ...board,
-        columns: moveCard(board.columns, active.id as string, over.id as string),
-      },
-      true
-    );
-  };
-
-  const handleRenameColumn = (columnId: string, title: string) => {
-    if (!board) {
-      return;
-    }
-
-    scheduleRenameSave({
-      ...board,
-      columns: board.columns.map((column) =>
-        column.id === columnId ? { ...column, title } : column
-      ),
-    });
-  };
-
-  const handleAddCard = (columnId: string, title: string, details: string) => {
-    if (!board) {
-      return;
-    }
-
-    const id = createId("card");
-    persistBoard(
-      {
-        ...board,
-        cards: {
-          ...board.cards,
-          [id]: { id, title, details: details || "No details yet." },
-        },
-        columns: board.columns.map((column) =>
-          column.id === columnId
-            ? { ...column, cardIds: [...column.cardIds, id] }
-            : column
-        ),
-      },
-      true
-    );
-  };
-
-  const handleDeleteCard = (columnId: string, cardId: string) => {
-    if (!board) {
-      return;
-    }
-
-    persistBoard(
-      {
-        ...board,
-        cards: Object.fromEntries(
-          Object.entries(board.cards).filter(([id]) => id !== cardId)
-        ),
-        columns: board.columns.map((column) =>
-          column.id === columnId
-            ? {
-                ...column,
-                cardIds: column.cardIds.filter((id) => id !== cardId),
-              }
-            : column
-        ),
-      },
-      true
-    );
-    setPendingDelete(null);
-  };
-
-  const requestDeleteCard = (columnId: string, cardId: string) => {
-    const card = board?.cards[cardId];
-    if (!card) {
-      return;
-    }
-    setPendingDelete({ columnId, cardId, title: card.title });
-  };
-
-  const handleEditCard = (cardId: string, title: string, details: string) => {
-    if (!board) {
-      return;
-    }
-
-    persistBoard(
-      {
-        ...board,
-        cards: {
-          ...board.cards,
-          [cardId]: { ...board.cards[cardId], title, details },
-        },
-      },
-      true
-    );
+    handleMoveCard(active.id as string, over.id as string);
   };
 
   if (isLoading) {
@@ -261,108 +141,51 @@ export const KanbanBoard = ({
 
       <main className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-6 px-4 pb-8 pt-8 sm:px-6 sm:pb-10 sm:pt-10 lg:flex-row lg:items-start">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 lg:gap-8">
-        <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-[var(--surface-strong)]/90 p-6 shadow-[var(--shadow)] backdrop-blur sm:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[var(--gray-text)]">
-                Single Board Kanban
-              </p>
-              <h1 className="mt-3 font-display text-3xl font-semibold text-[var(--navy-dark)] sm:text-4xl">
-                Kanban Studio
-              </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--gray-text)]">
-                Keep momentum visible. Rename columns, drag cards between stages,
-                and capture quick notes without getting buried in settings.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
-                  Signed in as
-                </p>
-                <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                  {displayName}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <ThemeToggle />
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
-                >
-                  Account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void onLogout()}
-                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
-                >
-                  Log out
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search cards..."
-              aria-label="Search cards"
-              data-testid="card-search"
-              className="w-full rounded-full border border-[var(--stroke)] bg-[var(--surface-elevated)] px-4 py-2 text-sm text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)] sm:max-w-xs"
-            />
-            <div className="flex gap-3 overflow-x-auto pb-1">
-            {board.columns.map((column) => (
-              <div
-                key={column.id}
-                className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
-                {column.title}
-              </div>
-            ))}
-            </div>
-          </div>
-        </header>
-
-        {showOnboarding ? (
-          <OnboardingBanner
-            onDismiss={() => {
-              localStorage.setItem("pm-onboarding-dismissed", "true");
-              setShowOnboarding(false);
-            }}
+          <KanbanHeader
+            board={board}
+            displayName={displayName}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onLogout={onLogout}
+            onOpenSettings={onOpenSettings}
           />
-        ) : null}
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <section className="board-columns gap-4 overflow-x-auto pb-2 sm:gap-5 lg:gap-6 board:overflow-x-visible">
-            {displayBoard.columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                cards={column.cardIds.map((cardId) => board.cards[cardId])}
-                onRename={handleRenameColumn}
-                onAddCard={handleAddCard}
-                onDeleteCard={requestDeleteCard}
-                onEditCard={setEditingCardId}
-              />
-            ))}
-          </section>
-          <DragOverlay>
-            {activeCard ? (
-              <div className="w-[260px]">
-                <KanbanCardPreview card={activeCard} />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+          {showOnboarding ? (
+            <OnboardingBanner
+              onDismiss={() => {
+                localStorage.setItem("pm-onboarding-dismissed", "true");
+                setShowOnboarding(false);
+              }}
+            />
+          ) : null}
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <section className="board-columns gap-4 overflow-x-auto pb-2 sm:gap-5 lg:gap-6 board:overflow-x-visible">
+              {displayBoard.columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                  onRename={handleRenameColumn}
+                  onAddCard={handleAddCard}
+                  onDeleteCard={requestDeleteCard}
+                  onEditCard={setEditingCardId}
+                />
+              ))}
+            </section>
+            <DragOverlay>
+              {activeCard ? (
+                <div className="w-[260px]">
+                  <KanbanCardPreview card={activeCard} />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
 
         <ChatSidebar onBoardUpdate={applyBoardFromAI} />

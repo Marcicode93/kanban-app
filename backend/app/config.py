@@ -36,7 +36,14 @@ def validate_mail_config() -> None:
             raise RuntimeError("SMTP_HOST is required when MAIL_PROVIDER=smtp")
         if not os.getenv("MAIL_FROM", "").strip():
             raise RuntimeError("MAIL_FROM is required when MAIL_PROVIDER=smtp")
+    elif provider == "fake":
+        if os.getenv("ENV", "development") != "test":
+            raise RuntimeError("MAIL_PROVIDER=fake is only allowed when ENV=test")
     elif provider == "console":
+        if is_production():
+            raise RuntimeError("MAIL_PROVIDER=console is not allowed in production")
         logger.warning(
             "MAIL_PROVIDER=console — emails are printed to server logs only, not sent"
         )
+    else:
+        raise RuntimeError(f"Unsupported MAIL_PROVIDER: {provider}")
