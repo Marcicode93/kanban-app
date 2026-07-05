@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { Card } from "@/lib/kanban";
 
 type CardEditModalProps = {
@@ -9,20 +9,17 @@ type CardEditModalProps = {
   onSave: (cardId: string, title: string, details: string) => void;
 };
 
-export const CardEditModal = ({ card, onClose, onSave }: CardEditModalProps) => {
-  const [title, setTitle] = useState("");
-  const [details, setDetails] = useState("");
-
-  useEffect(() => {
-    if (card) {
-      setTitle(card.title);
-      setDetails(card.details);
-    }
-  }, [card]);
-
-  if (!card) {
-    return null;
-  }
+const CardEditForm = ({
+  card,
+  onClose,
+  onSave,
+}: {
+  card: Card;
+  onClose: () => void;
+  onSave: (cardId: string, title: string, details: string) => void;
+}) => {
+  const [title, setTitle] = useState(card.title);
+  const [details, setDetails] = useState(card.details);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -94,4 +91,12 @@ export const CardEditModal = ({ card, onClose, onSave }: CardEditModalProps) => 
       </form>
     </div>
   );
+};
+
+export const CardEditModal = ({ card, onClose, onSave }: CardEditModalProps) => {
+  if (!card) {
+    return null;
+  }
+
+  return <CardEditForm key={card.id} card={card} onClose={onClose} onSave={onSave} />;
 };

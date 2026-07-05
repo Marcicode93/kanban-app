@@ -24,7 +24,6 @@ import { getBoard, saveBoard } from "@/lib/api";
 import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
 export const KanbanBoard = ({
-  username,
   displayName,
   onLogout,
   onOpenSettings,
@@ -45,7 +44,11 @@ export const KanbanBoard = ({
     title: string;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem("pm-onboarding-dismissed") !== "true"
+  );
   const [toast, setToast] = useState<{
     message: string;
     variant: "error" | "success";
@@ -64,9 +67,6 @@ export const KanbanBoard = ({
       .then(setBoard)
       .catch(() => setError("Failed to load board."))
       .finally(() => setIsLoading(false));
-    setShowOnboarding(
-      localStorage.getItem("pm-onboarding-dismissed") !== "true"
-    );
   }, []);
 
   const persistBoard = (next: BoardData, showSuccess = false) => {

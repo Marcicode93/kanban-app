@@ -33,10 +33,16 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    refreshAuth().catch(() => {
-      setScreen("login");
-      setIsLoading(false);
-    });
+    async function loadAuth() {
+      try {
+        await refreshAuth();
+      } catch {
+        setScreen("login");
+        setIsLoading(false);
+      }
+    }
+
+    void loadAuth();
   }, [refreshAuth]);
 
   const handleLogout = async () => {
