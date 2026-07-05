@@ -16,7 +16,9 @@ const getFirstColumn = () => screen.getAllByTestId(/column-/i)[0];
 
 const defaultProps = {
   username: "user",
+  displayName: "user",
   onLogout: vi.fn(),
+  onOpenSettings: vi.fn(),
 };
 
 describe("KanbanBoard", () => {
@@ -73,6 +75,7 @@ describe("KanbanBoard", () => {
       name: /delete new card/i,
     });
     await userEvent.click(deleteButton);
+    await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 
     expect(within(column).queryByText("New card")).not.toBeInTheDocument();
   });

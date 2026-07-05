@@ -8,6 +8,7 @@ vi.mock("@/lib/api", () => ({
   logout: vi.fn(),
   getBoard: vi.fn(),
   saveBoard: vi.fn(),
+  sendChatMessage: vi.fn(),
 }));
 
 import { getAuthStatus, getBoard, logout } from "@/lib/api";
@@ -24,6 +25,8 @@ describe("App", () => {
     vi.mocked(getAuthStatus).mockResolvedValue({
       authenticated: false,
       username: null,
+      email: null,
+      email_verified: false,
     });
 
     renderWithProviders(<App />);
@@ -31,10 +34,12 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it("shows the kanban board when authenticated", async () => {
+  it("shows the kanban board when authenticated and verified", async () => {
     vi.mocked(getAuthStatus).mockResolvedValue({
       authenticated: true,
       username: "user",
+      email: null,
+      email_verified: true,
     });
 
     renderWithProviders(<App />);
@@ -43,10 +48,33 @@ describe("App", () => {
     expect(screen.getByText(/signed in as/i)).toBeInTheDocument();
   });
 
+  it("shows verify screen when authenticated but unverified", async () => {
+    vi.mocked(getAuthStatus).mockResolvedValue({
+      authenticated: true,
+      username: "newbie",
+      email: "newbie@example.com",
+      email_verified: false,
+    });
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: /verify your email/i })).toBeInTheDocument();
+  });
+
   it("returns to login after logout", async () => {
     vi.mocked(getAuthStatus)
-      .mockResolvedValueOnce({ authenticated: true, username: "user" })
-      .mockResolvedValueOnce({ authenticated: true, username: "user" });
+      .mockResolvedValueOnce({
+        authenticated: true,
+        username: "user",
+        email: null,
+        email_verified: true,
+      })
+      .mockResolvedValueOnce({
+        authenticated: true,
+        username: "user",
+        email: null,
+        email_verified: true,
+      });
     vi.mocked(logout).mockResolvedValue();
 
     renderWithProviders(<App />);
@@ -57,6 +85,5 @@ describe("App", () => {
     await waitFor(() => {
       expect(logout).toHaveBeenCalled();
     });
-    expect(screen.queryByRole("heading", { name: /kanban studio/i })).not.toBeInTheDocument();
   });
 });

@@ -6,13 +6,21 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 type AuthFormProps = {
   onSuccess: () => void;
+  onPendingVerification: (email: string) => void;
+  onForgotPassword: () => void;
 };
 
 type Mode = "login" | "register";
 
-export const LoginForm = ({ onSuccess }: AuthFormProps) => {
+const MIN_PASSWORD_LENGTH = 8;
+
+export const LoginForm = ({
+  onSuccess,
+  onPendingVerification,
+  onForgotPassword,
+}: AuthFormProps) => {
   const [mode, setMode] = useState<Mode>("login");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,8 +29,13 @@ export const LoginForm = ({ onSuccess }: AuthFormProps) => {
     event.preventDefault();
     setError(null);
 
-    if (!username.trim() || !password.trim()) {
-      setError("Username and password are required.");
+    if (!email.trim() || !password.trim()) {
+      setError("Email and password are required.");
+      return;
+    }
+
+    if (mode === "register" && password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
 
@@ -30,18 +43,31 @@ export const LoginForm = ({ onSuccess }: AuthFormProps) => {
     try {
       const api = await import("@/lib/api");
       if (mode === "login") {
-        await api.login(username.trim(), password);
+        await api.login(email.trim(), password);
+        onSuccess();
       } else {
-        await api.register(username.trim(), password);
+        const result = await api.register(email.trim(), password);
+        if (result.status === "pending_verification") {
+          onPendingVerification(email.trim().toLowerCase());
+        } else {
+          onSuccess();
+        }
       }
-      onSuccess();
     } catch (err) {
-      if (err instanceof Error && err.message === "Username already taken") {
-        setError("Username already taken.");
-      } else if (mode === "login") {
-        setError("Invalid username or password.");
+      if (err instanceof Error) {
+        if (err.message.includes("Email already registered")) {
+          setError("Email already registered.");
+        } else if (err.message.includes("8 characters")) {
+          setError(err.message);
+        } else if (err.message.includes("Could not send verification email")) {
+          setError(err.message);
+        } else if (mode === "login") {
+          setError("Invalid email or password.");
+        } else {
+          setError(err.message || "Registration failed. Please try again.");
+        }
       } else {
-        setError("Registration failed. Please try again.");
+        setError("Something went wrong. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -70,24 +96,25 @@ export const LoginForm = ({ onSuccess }: AuthFormProps) => {
         </h1>
         <p className="mt-3 text-sm leading-6 text-[var(--gray-text)]">
           {mode === "login"
-            ? "Use your workspace credentials to open the Kanban board."
-            : "Register to get your own Kanban board."}
+            ? "Sign in with your email and password. Demo account: user / password."
+            : "Register with email verification to get your own Kanban board."}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div>
             <label
-              htmlFor="username"
+              htmlFor="email"
               className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]"
             >
-              Username
+              Email
             </label>
             <input
-              id="username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              id="email"
+              type={mode === "register" ? "email" : "text"}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               className="mt-2 w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
-              autoComplete="username"
+              autoComplete="email"
             />
           </div>
           <div>
@@ -126,15 +153,26 @@ export const LoginForm = ({ onSuccess }: AuthFormProps) => {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={toggleMode}
-          className="mt-6 text-sm text-[var(--primary-blue)] transition hover:underline"
-        >
-          {mode === "login"
-            ? "Need an account? Create one"
-            : "Already have an account? Sign in"}
-        </button>
+        <div className="mt-6 flex flex-col gap-2 text-sm">
+          <button
+            type="button"
+            onClick={toggleMode}
+            className="text-left text-[var(--primary-blue)] transition hover:underline"
+          >
+            {mode === "login"
+              ? "Need an account? Create one"
+              : "Already have an account? Sign in"}
+          </button>
+          {mode === "login" ? (
+            <button
+              type="button"
+              onClick={onForgotPassword}
+              className="text-left text-[var(--gray-text)] transition hover:underline"
+            >
+              Forgot password?
+            </button>
+          ) : null}
+        </div>
       </main>
     </div>
   );

@@ -21,7 +21,7 @@ def test_ai_chat_rate_limit(client: TestClient, monkeypatch: pytest.MonkeyPatch)
         lambda board, history, message: AIChatResult(message="ok"),
     )
 
-    client.post("/api/login", json={"username": "user", "password": "password"})
+    client.post("/api/login", json={"email": "user", "password": "password"})
 
     for _ in range(10):
         assert (

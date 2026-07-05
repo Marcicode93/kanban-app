@@ -2,6 +2,11 @@ import type { BoardData } from "@/lib/kanban";
 
 const API_BASE = "";
 
+async function parseError(response: Response, fallback: string): Promise<Error> {
+  const body = (await response.json().catch(() => ({}))) as { detail?: string };
+  return new Error(body.detail ?? fallback);
+}
+
 async function apiFetch(path: string, options: RequestInit = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -17,6 +22,14 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 export type AuthStatus = {
   authenticated: boolean;
   username: string | null;
+  email: string | null;
+  email_verified: boolean;
+};
+
+export type AccountInfo = {
+  username: string;
+  email: string | null;
+  email_verified: boolean;
 };
 
 export async function getAuthStatus(): Promise<AuthStatus> {
@@ -27,26 +40,122 @@ export async function getAuthStatus(): Promise<AuthStatus> {
   return response.json();
 }
 
-export async function login(username: string, password: string): Promise<void> {
+export async function login(email: string, password: string): Promise<void> {
   const response = await apiFetch("/api/login", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
     throw new Error("Invalid credentials");
   }
 }
 
-export async function register(username: string, password: string): Promise<void> {
+export type RegisterResult =
+  | { status: "pending_verification" }
+  | { status: "ok" };
+
+export async function register(
+  email: string,
+  password: string
+): Promise<RegisterResult> {
   const response = await apiFetch("/api/register", {
     method: "POST",
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (response.status === 409) {
-    throw new Error("Username already taken");
+    const body = (await response.json()) as { detail?: string };
+    throw new Error(body.detail ?? "Registration failed");
+  }
+  if (response.status === 400) {
+    throw await parseError(response, "Registration failed");
+  }
+  if (response.status === 503) {
+    throw await parseError(response, "Could not send verification email");
   }
   if (!response.ok) {
     throw new Error("Registration failed");
+  }
+  return response.json();
+}
+
+export async function verifyEmail(
+  code: string,
+  email?: string
+): Promise<void> {
+  const response = await apiFetch("/api/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ code, email }),
+  });
+  if (!response.ok) {
+    throw new Error("Verification failed");
+  }
+}
+
+export async function resendVerificationCode(email: string): Promise<void> {
+  const response = await apiFetch("/api/auth/resend-code", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    throw new Error("Resend failed");
+  }
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  const response = await apiFetch("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    throw new Error("Forgot password failed");
+  }
+}
+
+export async function resetPassword(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  const response = await apiFetch("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email, code, new_password: newPassword }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, "Reset failed");
+  }
+}
+
+export async function getAccount(): Promise<AccountInfo> {
+  const response = await apiFetch("/api/account");
+  if (!response.ok) {
+    throw new Error("Failed to load account");
+  }
+  return response.json();
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const response = await apiFetch("/api/account/password", {
+    method: "POST",
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, "Password change failed");
+  }
+}
+
+export async function changeEmail(newEmail: string): Promise<void> {
+  const response = await apiFetch("/api/account/email", {
+    method: "POST",
+    body: JSON.stringify({ new_email: newEmail }),
+  });
+  if (!response.ok) {
+    throw await parseError(response, "Email change failed");
   }
 }
 
@@ -94,11 +203,11 @@ export async function sendChatMessage(
     method: "POST",
     body: JSON.stringify({ message, history }),
   });
+  if (response.status === 429) {
+    throw new Error("AI chat rate limit exceeded");
+  }
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      detail?: string;
-    };
-    throw new Error(body.detail ?? "Failed to send chat message");
+    throw await parseError(response, "Failed to send chat message");
   }
   const data = (await response.json()) as {
     message: string;

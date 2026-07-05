@@ -41,8 +41,12 @@ export const ChatSidebar = ({ onBoardUpdate }: ChatSidebarProps) => {
       if (response.board) {
         onBoardUpdate(response.board);
       }
-    } catch {
-      setError("Failed to get AI response. Please try again.");
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message.toLowerCase().includes("rate limit")
+          ? "AI chat limit reached (10/hour). Try again later."
+          : "Failed to get AI response. Please try again.";
+      setError(message);
       setMessages(history);
       setInput(trimmed);
     } finally {
@@ -67,6 +71,19 @@ export const ChatSidebar = ({ onBoardUpdate }: ChatSidebarProps) => {
             Board chat
           </h2>
         </div>
+        <button
+          type="button"
+          data-testid="chat-clear"
+          disabled={messages.length === 0 && !error}
+          onClick={() => {
+            setMessages([]);
+            setError(null);
+            setInput("");
+          }}
+          className="rounded-full border border-[var(--stroke)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)] disabled:opacity-40"
+        >
+          Clear
+        </button>
       </div>
 
       <div

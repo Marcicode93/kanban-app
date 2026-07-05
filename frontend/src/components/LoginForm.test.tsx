@@ -10,6 +10,12 @@ vi.mock("@/lib/api", () => ({
 
 import { login, register } from "@/lib/api";
 
+const defaultProps = {
+  onSuccess: vi.fn(),
+  onPendingVerification: vi.fn(),
+  onForgotPassword: vi.fn(),
+};
+
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.mocked(login).mockReset();
@@ -17,10 +23,10 @@ describe("LoginForm", () => {
   });
 
   it("shows validation error when fields are empty", async () => {
-    renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
+    renderWithProviders(<LoginForm {...defaultProps} />);
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(screen.getByText(/username and password are required/i)).toBeInTheDocument();
+    expect(screen.getByText(/email and password are required/i)).toBeInTheDocument();
     expect(login).not.toHaveBeenCalled();
   });
 
@@ -28,8 +34,8 @@ describe("LoginForm", () => {
     vi.mocked(login).mockResolvedValue();
     const onSuccess = vi.fn();
 
-    renderWithProviders(<LoginForm onSuccess={onSuccess} />);
-    await userEvent.type(screen.getByLabelText(/username/i), "user");
+    renderWithProviders(<LoginForm {...defaultProps} onSuccess={onSuccess} />);
+    await userEvent.type(screen.getByLabelText(/email/i), "user");
     await userEvent.type(screen.getByLabelText(/password/i), "password");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
@@ -42,39 +48,44 @@ describe("LoginForm", () => {
   it("shows an error for invalid credentials", async () => {
     vi.mocked(login).mockRejectedValue(new Error("Invalid credentials"));
 
-    renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText(/username/i), "user");
+    renderWithProviders(<LoginForm {...defaultProps} />);
+    await userEvent.type(screen.getByLabelText(/email/i), "user");
     await userEvent.type(screen.getByLabelText(/password/i), "wrong");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(await screen.findByText(/invalid username or password/i)).toBeInTheDocument();
+    expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();
   });
 
-  it("registers a new account", async () => {
-    vi.mocked(register).mockResolvedValue();
-    const onSuccess = vi.fn();
+  it("registers a new account and triggers verification", async () => {
+    vi.mocked(register).mockResolvedValue({ status: "pending_verification" });
+    const onPendingVerification = vi.fn();
 
-    renderWithProviders(<LoginForm onSuccess={onSuccess} />);
+    renderWithProviders(
+      <LoginForm
+        {...defaultProps}
+        onPendingVerification={onPendingVerification}
+      />
+    );
     await userEvent.click(screen.getByRole("button", { name: /create one/i }));
-    await userEvent.type(screen.getByLabelText(/username/i), "newbie");
+    await userEvent.type(screen.getByLabelText(/email/i), "newbie@example.com");
     await userEvent.type(screen.getByLabelText(/password/i), "secret123");
     await userEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => {
-      expect(register).toHaveBeenCalledWith("newbie", "secret123");
-      expect(onSuccess).toHaveBeenCalled();
+      expect(register).toHaveBeenCalledWith("newbie@example.com", "secret123");
+      expect(onPendingVerification).toHaveBeenCalledWith("newbie@example.com");
     });
   });
 
-  it("shows an error when username is taken", async () => {
-    vi.mocked(register).mockRejectedValue(new Error("Username already taken"));
+  it("shows an error when email is already registered", async () => {
+    vi.mocked(register).mockRejectedValue(new Error("Email already registered"));
 
-    renderWithProviders(<LoginForm onSuccess={vi.fn()} />);
+    renderWithProviders(<LoginForm {...defaultProps} />);
     await userEvent.click(screen.getByRole("button", { name: /create one/i }));
-    await userEvent.type(screen.getByLabelText(/username/i), "taken");
+    await userEvent.type(screen.getByLabelText(/email/i), "taken@example.com");
     await userEvent.type(screen.getByLabelText(/password/i), "secret123");
     await userEvent.click(screen.getByRole("button", { name: /create account/i }));
 
-    expect(await screen.findByText(/username already taken/i)).toBeInTheDocument();
+    expect(await screen.findByText(/email already registered/i)).toBeInTheDocument();
   });
 });

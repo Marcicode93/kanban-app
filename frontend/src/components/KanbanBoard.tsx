@@ -15,7 +15,9 @@ import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { BoardSkeleton } from "@/components/BoardSkeleton";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { CardEditModal } from "@/components/CardEditModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Toast } from "@/components/Toast";
 import { getBoard, saveBoard } from "@/lib/api";
@@ -23,17 +25,31 @@ import { createId, moveCard, type BoardData } from "@/lib/kanban";
 
 export const KanbanBoard = ({
   username,
+  displayName,
   onLogout,
+  onOpenSettings,
 }: {
   username: string;
+  displayName: string;
   onLogout: () => void | Promise<void>;
+  onOpenSettings: () => void;
 }) => {
   const [board, setBoard] = useState<BoardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    columnId: string;
+    cardId: string;
+    title: string;
+  } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "error" | "success";
+  } | null>(null);
   const saveQueue = useRef(Promise.resolve());
   const renameTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,15 +64,26 @@ export const KanbanBoard = ({
       .then(setBoard)
       .catch(() => setError("Failed to load board."))
       .finally(() => setIsLoading(false));
+    setShowOnboarding(
+      localStorage.getItem("pm-onboarding-dismissed") !== "true"
+    );
   }, []);
 
-  const persistBoard = (next: BoardData) => {
+  const persistBoard = (next: BoardData, showSuccess = false) => {
     setBoard(next);
     saveQueue.current = saveQueue.current
       .then(() => saveBoard(next))
       .then(setBoard)
+      .then(() => {
+        if (showSuccess) {
+          setToast({ message: "Board saved.", variant: "success" });
+        }
+      })
       .catch(() => {
-        setToastMessage("Failed to save board. Please try again.");
+        setToast({
+          message: "Failed to save board. Please try again.",
+          variant: "error",
+        });
       });
   };
 
@@ -77,6 +104,34 @@ export const KanbanBoard = ({
 
   const cardsById = useMemo(() => board?.cards ?? {}, [board]);
 
+  const displayBoard = useMemo(() => {
+    if (!board) {
+      return null;
+    }
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return board;
+    }
+
+    const matchingIds = new Set(
+      Object.values(board.cards)
+        .filter(
+          (card) =>
+            card.title.toLowerCase().includes(query) ||
+            card.details.toLowerCase().includes(query)
+        )
+        .map((card) => card.id)
+    );
+
+    return {
+      ...board,
+      columns: board.columns.map((column) => ({
+        ...column,
+        cardIds: column.cardIds.filter((id) => matchingIds.has(id)),
+      })),
+    };
+  }, [board, searchQuery]);
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(event.active.id as string);
   };
@@ -89,10 +144,13 @@ export const KanbanBoard = ({
       return;
     }
 
-    persistBoard({
-      ...board,
-      columns: moveCard(board.columns, active.id as string, over.id as string),
-    });
+    persistBoard(
+      {
+        ...board,
+        columns: moveCard(board.columns, active.id as string, over.id as string),
+      },
+      true
+    );
   };
 
   const handleRenameColumn = (columnId: string, title: string) => {
@@ -114,18 +172,21 @@ export const KanbanBoard = ({
     }
 
     const id = createId("card");
-    persistBoard({
-      ...board,
-      cards: {
-        ...board.cards,
-        [id]: { id, title, details: details || "No details yet." },
+    persistBoard(
+      {
+        ...board,
+        cards: {
+          ...board.cards,
+          [id]: { id, title, details: details || "No details yet." },
+        },
+        columns: board.columns.map((column) =>
+          column.id === columnId
+            ? { ...column, cardIds: [...column.cardIds, id] }
+            : column
+        ),
       },
-      columns: board.columns.map((column) =>
-        column.id === columnId
-          ? { ...column, cardIds: [...column.cardIds, id] }
-          : column
-      ),
-    });
+      true
+    );
   };
 
   const handleDeleteCard = (columnId: string, cardId: string) => {
@@ -133,20 +194,32 @@ export const KanbanBoard = ({
       return;
     }
 
-    persistBoard({
-      ...board,
-      cards: Object.fromEntries(
-        Object.entries(board.cards).filter(([id]) => id !== cardId)
-      ),
-      columns: board.columns.map((column) =>
-        column.id === columnId
-          ? {
-              ...column,
-              cardIds: column.cardIds.filter((id) => id !== cardId),
-            }
-          : column
-      ),
-    });
+    persistBoard(
+      {
+        ...board,
+        cards: Object.fromEntries(
+          Object.entries(board.cards).filter(([id]) => id !== cardId)
+        ),
+        columns: board.columns.map((column) =>
+          column.id === columnId
+            ? {
+                ...column,
+                cardIds: column.cardIds.filter((id) => id !== cardId),
+              }
+            : column
+        ),
+      },
+      true
+    );
+    setPendingDelete(null);
+  };
+
+  const requestDeleteCard = (columnId: string, cardId: string) => {
+    const card = board?.cards[cardId];
+    if (!card) {
+      return;
+    }
+    setPendingDelete({ columnId, cardId, title: card.title });
   };
 
   const handleEditCard = (cardId: string, title: string, details: string) => {
@@ -154,20 +227,23 @@ export const KanbanBoard = ({
       return;
     }
 
-    persistBoard({
-      ...board,
-      cards: {
-        ...board.cards,
-        [cardId]: { ...board.cards[cardId], title, details },
+    persistBoard(
+      {
+        ...board,
+        cards: {
+          ...board.cards,
+          [cardId]: { ...board.cards[cardId], title, details },
+        },
       },
-    });
+      true
+    );
   };
 
   if (isLoading) {
     return <BoardSkeleton />;
   }
 
-  if (error || !board) {
+  if (error || !board || !displayBoard) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-[var(--secondary-purple)]">
         {error ?? "Failed to load board."}
@@ -205,11 +281,18 @@ export const KanbanBoard = ({
                   Signed in as
                 </p>
                 <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                  {username}
+                  {displayName}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
+                >
+                  Account
+                </button>
                 <button
                   type="button"
                   onClick={() => void onLogout()}
@@ -220,7 +303,17 @@ export const KanbanBoard = ({
               </div>
             </div>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search cards..."
+              aria-label="Search cards"
+              data-testid="card-search"
+              className="w-full rounded-full border border-[var(--stroke)] bg-[var(--surface-elevated)] px-4 py-2 text-sm text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)] sm:max-w-xs"
+            />
+            <div className="flex gap-3 overflow-x-auto pb-1">
             {board.columns.map((column) => (
               <div
                 key={column.id}
@@ -230,8 +323,18 @@ export const KanbanBoard = ({
                 {column.title}
               </div>
             ))}
+            </div>
           </div>
         </header>
+
+        {showOnboarding ? (
+          <OnboardingBanner
+            onDismiss={() => {
+              localStorage.setItem("pm-onboarding-dismissed", "true");
+              setShowOnboarding(false);
+            }}
+          />
+        ) : null}
 
         <DndContext
           sensors={sensors}
@@ -240,14 +343,14 @@ export const KanbanBoard = ({
           onDragEnd={handleDragEnd}
         >
           <section className="board-columns gap-4 overflow-x-auto pb-2 sm:gap-5 lg:gap-6 board:overflow-x-visible">
-            {board.columns.map((column) => (
+            {displayBoard.columns.map((column) => (
               <KanbanColumn
                 key={column.id}
                 column={column}
                 cards={column.cardIds.map((cardId) => board.cards[cardId])}
                 onRename={handleRenameColumn}
                 onAddCard={handleAddCard}
-                onDeleteCard={handleDeleteCard}
+                onDeleteCard={requestDeleteCard}
                 onEditCard={setEditingCardId}
               />
             ))}
@@ -270,8 +373,23 @@ export const KanbanBoard = ({
         onClose={() => setEditingCardId(null)}
         onSave={handleEditCard}
       />
-      {toastMessage ? (
-        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      {pendingDelete ? (
+        <ConfirmModal
+          title="Delete card"
+          message={`Remove "${pendingDelete.title}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          onConfirm={() =>
+            handleDeleteCard(pendingDelete.columnId, pendingDelete.cardId)
+          }
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
+      {toast ? (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onDismiss={() => setToast(null)}
+        />
       ) : null}
     </div>
   );

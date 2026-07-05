@@ -110,14 +110,20 @@ def provision_board(db: Session, user: User, board_data: BoardData) -> Board:
     return board
 
 
-def create_user_with_board(db: Session, username: str, password: str) -> User:
+def create_user_with_board(db: Session, email: str, password: str) -> User:
+    normalized_email = email.strip().lower()
     user = User(
-        username=username,
+        username=normalized_email,
+        email=normalized_email,
         password_hash=hash_password(password),
+        email_verified=False,
+        is_demo=False,
     )
     db.add(user)
     db.flush()
     provision_board(db, user, EMPTY_BOARD)
+    db.commit()
+    db.refresh(user)
     return user
 
 
@@ -128,6 +134,8 @@ def seed_if_empty(db: Session) -> None:
     user = User(
         username=MVP_USERNAME,
         password_hash=hash_password(MVP_PASSWORD),
+        email_verified=True,
+        is_demo=True,
     )
     db.add(user)
     db.flush()

@@ -2,7 +2,7 @@ import os
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 _engine = None
@@ -22,6 +22,37 @@ def default_database_url() -> str:
     return f"sqlite:///{data_dir / 'pm.db'}"
 
 
+def _migrate_schema(engine) -> None:
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("users")}
+    with engine.begin() as connection:
+        if "email" not in columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN email TEXT"))
+        if "email_verified" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT 0"
+                )
+            )
+        if "is_demo" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN is_demo BOOLEAN NOT NULL DEFAULT 0")
+            )
+        if "email_verified_at" not in columns:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN email_verified_at DATETIME")
+            )
+        connection.execute(
+            text(
+                "UPDATE users SET email_verified = 1, is_demo = 1 "
+                "WHERE username = 'user' AND (email IS NULL OR email = '')"
+            )
+        )
+
+
 def init_db(url: str | None = None) -> None:
     global _engine, _SessionLocal
     _engine = create_engine(
@@ -32,6 +63,7 @@ def init_db(url: str | None = None) -> None:
     from app.db import models  # noqa: F401
 
     Base.metadata.create_all(bind=_engine)
+    _migrate_schema(_engine)
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -14,10 +14,10 @@ test("logs in with valid credentials", async ({ page }) => {
 
 test("rejects invalid credentials", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel(/username/i).fill("user");
+  await page.getByLabel(/email/i).fill("user");
   await page.getByLabel(/password/i).fill("wrong");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page.getByText(/invalid username or password/i)).toBeVisible();
+  await expect(page.getByText(/invalid email or password/i)).toBeVisible();
 });
 
 test("logs out back to the login screen", async ({ page }) => {

@@ -28,8 +28,31 @@ def get_current_user(user: str = Depends(require_user)) -> str:
     return user
 
 
-def authenticate_user(db: Session, username: str, password: str) -> User | None:
+def get_user_record(
+    username: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
     user = db.scalar(select(User).where(User.username == username))
+    if user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+
+def get_verified_user(user: User = Depends(get_user_record)) -> User:
+    if not user.is_demo and not user.email_verified:
+        raise HTTPException(status_code=403, detail="Email not verified")
+    return user
+
+
+def authenticate_user(db: Session, login: str, password: str) -> User | None:
+    login = login.strip()
+    email_login = login.lower()
+
+    user = None
+    if "@" in login:
+        user = db.scalar(select(User).where(User.email == email_login))
+    if user is None:
+        user = db.scalar(select(User).where(User.username == login))
     if user is None:
         return None
     if not bcrypt.checkpw(password.encode(), user.password_hash.encode()):

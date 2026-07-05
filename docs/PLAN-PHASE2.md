@@ -24,7 +24,7 @@ Allow new users to sign up; each gets their own board.
 - [x] Backend tests: register success, duplicate user, login after register
 - [x] E2E: register new user, see empty/default board, isolated from other users
 
-### Tests
+### Testsc
 
 - [x] `POST /api/register` creates user and board
 - [x] Duplicate username returns 409
@@ -112,6 +112,46 @@ See [DEPLOY.md](./DEPLOY.md) and [portfolio-case-study.md](./portfolio-case-stud
 
 ## Status
 
-**Phase 2 complete (Parts A–C).** Ready for you to deploy.
+**Phase 2 complete (Parts A–C).** Part D (email auth) and Phase 2.5 polish are implemented.
 
 Hosting/deploy is yours after the build is finished.
+
+---
+
+## Part D: Email registration and account settings
+
+Full email flow: verify on register, forgot/reset password, account settings. Username login unchanged. Demo user `user` / `password` skips verification.
+
+### Substeps
+
+- [x] User model: `email`, `email_verified`, `is_demo`, verification tokens
+- [x] `POST /api/register` with email; returns `pending_verification` (no session until verified)
+- [x] `POST /api/auth/verify-email`, `/resend-code`, `/forgot-password`, `/reset-password`
+- [x] `GET /api/account`, `POST /api/account/password`, `POST /api/account/email`
+- [x] Mail providers: `fake`, `console`, `resend`, `smtp` (`backend/app/mail.py`)
+- [x] Block board/AI for unverified users; demo user exempt
+- [x] Verify, forgot-password, and account settings UI
+- [x] `.env.example` with mail-related variables
+- [x] Tests and `docs/TESTING-EMAIL.md`
+
+### Success criteria
+
+- New users verify email before using the board
+- Password reset and email change work via emailed codes
+- Demo credentials still work without email
+
+---
+
+## Phase 2.5: UX polish
+
+- [x] Success/error toasts
+- [x] Delete card confirmation modal
+- [x] Card search filter
+- [x] Chat clear history
+- [x] Rate-limit message in chat (429)
+- [x] Onboarding banner for empty boards
+- [x] Password minimum 8 characters
+
+### Deferred (Phase 2.6)
+
+- Due date and label on cards

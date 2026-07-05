@@ -421,6 +421,7 @@ source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "itsdangerous" },
     { name = "openai" },
     { name = "python-dotenv" },
@@ -438,6 +439,7 @@ dev = [
 requires-dist = [
     { name = "bcrypt", specifier = ">=4.2" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.28" },
     { name = "itsdangerous", specifier = ">=2.2" },
     { name = "openai", specifier = ">=1.68" },
     { name = "python-dotenv", specifier = ">=1.0" },

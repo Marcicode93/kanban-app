@@ -1,13 +1,21 @@
 import { expect, test } from "@playwright/test";
 
-test("registers a new user with an empty board", async ({ page }) => {
-  const username = `user${Date.now()}`;
+import { fetchVerificationCode } from "./helpers";
+
+test("registers a new user with an empty board", async ({ page, request }) => {
+  const email = `user${Date.now()}@example.com`;
 
   await page.goto("/");
   await page.getByRole("button", { name: /create one/i }).click();
-  await page.getByLabel(/username/i).fill(username);
-  await page.getByLabel(/password/i).fill("secret123");
+  await page.getByLabel(/^email$/i).fill(email);
+  await page.getByLabel(/^password$/i).fill("secret123");
   await page.getByRole("button", { name: /create account/i }).click();
+
+  await expect(page.getByRole("heading", { name: /verify your email/i })).toBeVisible();
+
+  const code = await fetchVerificationCode(request, email);
+  await page.getByLabel(/^code$/i).fill(code);
+  await page.getByRole("button", { name: /^verify$/i }).click();
 
   await expect(page.getByRole("heading", { name: "Kanban Studio" })).toBeVisible();
   await expect(page.getByText(/signed in as/i)).toBeVisible();

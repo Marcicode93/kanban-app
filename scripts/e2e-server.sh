@@ -14,4 +14,6 @@ cp -r out/. "$PROJECT_DIR/backend/static/"
 
 cd "$PROJECT_DIR/backend"
 export DATABASE_URL="sqlite:///${TMPDIR:-/tmp}/pm-e2e-$$.db"
+export ENV=test
+export MAIL_PROVIDER=fake
 exec uv run uvicorn app.main:app --host 127.0.0.1 --port "$PORT"

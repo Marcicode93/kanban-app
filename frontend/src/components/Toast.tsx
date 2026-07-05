@@ -1,15 +1,27 @@
 "use client";
 
+type ToastVariant = "error" | "success";
+
 type ToastProps = {
   message: string;
+  variant?: ToastVariant;
   onDismiss: () => void;
 };
 
-export const Toast = ({ message, onDismiss }: ToastProps) => (
+export const Toast = ({
+  message,
+  variant = "error",
+  onDismiss,
+}: ToastProps) => (
   <div
     role="alert"
     data-testid="toast"
-    className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-[var(--stroke)] bg-[var(--navy-dark)] px-5 py-3 text-sm text-white shadow-[var(--shadow)]"
+    data-variant={variant}
+    className={`fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border px-5 py-3 text-sm shadow-[var(--shadow)] ${
+      variant === "success"
+        ? "border-[var(--primary-blue)] bg-[var(--primary-blue)] text-white"
+        : "border-[var(--stroke)] bg-[var(--navy-dark)] text-white"
+    }`}
   >
     <span>{message}</span>
     <button

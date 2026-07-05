@@ -6,7 +6,7 @@ from app.db.seed import INITIAL_BOARD
 
 def login(client: TestClient) -> None:
     response = client.post(
-        "/api/login", json={"username": "user", "password": "password"}
+        "/api/login", json={"email": "user", "password": "password"}
     )
     assert response.status_code == 200
 
